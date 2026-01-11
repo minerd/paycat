@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Box, Users, CreditCard, TrendingUp, Apple, Smartphone } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Apple, Smartphone, DollarSign } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface DashboardData {
   apps: number;
   total_subscribers: number;
   active_subscriptions: number;
+  mrr?: { total: number; currency: string }[];
   revenue_30d: { total: number; currency: string }[];
   events_30d: { event_type: string; count: number }[];
   platform_breakdown: { platform: string; count: number }[];
@@ -47,25 +48,26 @@ export default function Dashboard() {
   }
 
   const totalRevenue = data?.revenue_30d.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
+  const totalMrr = data?.mrr?.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
 
   const stats = [
     {
-      name: 'Total Apps',
-      value: data?.apps || 0,
-      icon: Box,
-      color: 'bg-blue-500',
-    },
-    {
-      name: 'Total Subscribers',
-      value: data?.total_subscribers || 0,
-      icon: Users,
-      color: 'bg-green-500',
+      name: 'MRR',
+      value: `$${(totalMrr / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      icon: DollarSign,
+      color: 'bg-emerald-500',
     },
     {
       name: 'Active Subscriptions',
       value: data?.active_subscriptions || 0,
       icon: CreditCard,
       color: 'bg-purple-500',
+    },
+    {
+      name: 'Total Subscribers',
+      value: data?.total_subscribers || 0,
+      icon: Users,
+      color: 'bg-blue-500',
     },
     {
       name: 'Revenue (30d)',

@@ -483,7 +483,7 @@ adminRouter.get('/dashboard', async (c) => {
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
   // Get counts
-  const [appsCount, subscribersCount, activeSubsCount, revenueResult] = await Promise.all([
+  const [appsCount, subscribersCount, activeSubsCount, revenueResult, mrrResult] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) as count FROM apps').first<{ count: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as count FROM subscribers').first<{ count: number }>(),
     c.env.DB.prepare("SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'").first<{ count: number }>(),
@@ -495,6 +495,13 @@ adminRouter.get('/dashboard', async (c) => {
     )
       .bind(thirtyDaysAgo)
       .all<{ total: number; currency: string }>(),
+    // MRR: Sum of active subscription prices (assuming monthly)
+    c.env.DB.prepare(
+      `SELECT SUM(price_amount) as total, price_currency as currency
+       FROM subscriptions
+       WHERE status = 'active' AND price_amount IS NOT NULL
+       GROUP BY price_currency`
+    ).all<{ total: number; currency: string }>(),
   ]);
 
   // Get recent events
@@ -519,6 +526,7 @@ adminRouter.get('/dashboard', async (c) => {
     apps: appsCount?.count || 0,
     total_subscribers: subscribersCount?.count || 0,
     active_subscriptions: activeSubsCount?.count || 0,
+    mrr: mrrResult.results || [],
     revenue_30d: revenueResult.results || [],
     events_30d: recentEvents.results || [],
     platform_breakdown: platformBreakdown.results || [],
