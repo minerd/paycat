@@ -1,0 +1,30 @@
+name: paycat_flutter
+description: PayCat Flutter SDK - Unified subscription management across iOS, Android, and Web
+version: 1.0.0
+homepage: https://github.com/minerd/paycat
+repository: https://github.com/minerd/paycat/tree/master/sdks/flutter
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  in_app_purchase: ^3.1.13
+  http: ^1.1.0
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.paycat.flutter
+        pluginClass: PaycatFlutterPlugin
+      ios:
+        pluginClass: PaycatFlutterPlugin

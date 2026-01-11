@@ -1,0 +1,882 @@
+{
+  "info": {
+    "name": "PayCat API",
+    "description": "Unified Payment & Subscription Management System API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8787",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "pk_test_your_api_key",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            }
+          }
+        },
+        {
+          "name": "Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Receipts",
+      "item": [
+        {
+          "name": "Verify iOS Receipt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app_user_id\": \"user_12345\",\n  \"platform\": \"ios\",\n  \"fetch_policy\": \"cache_or_fetch\",\n  \"receipt_data\": {\n    \"transaction_id\": \"1000000123456789\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/receipts",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "receipts"]
+            }
+          }
+        },
+        {
+          "name": "Verify Android Receipt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app_user_id\": \"user_12345\",\n  \"platform\": \"android\",\n  \"fetch_policy\": \"cache_or_fetch\",\n  \"receipt_data\": {\n    \"purchase_token\": \"your_purchase_token\",\n    \"product_id\": \"com.app.premium_monthly\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/receipts",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "receipts"]
+            }
+          }
+        },
+        {
+          "name": "Verify Stripe Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app_user_id\": \"user_12345\",\n  \"platform\": \"stripe\",\n  \"receipt_data\": {\n    \"subscription_id\": \"sub_1234567890\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/receipts",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "receipts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscribers",
+      "item": [
+        {
+          "name": "Get Subscriber",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscribers/user_12345",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "subscribers", "user_12345"]
+            }
+          }
+        },
+        {
+          "name": "Update Subscriber Attributes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attributes\": {\n    \"$email\": \"user@example.com\",\n    \"$displayName\": \"John Doe\",\n    \"custom_field\": \"value\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscribers/user_12345/attributes",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "subscribers", "user_12345", "attributes"]
+            }
+          }
+        },
+        {
+          "name": "Create Alias",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_app_user_id\": \"identified_user_123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscribers/$RCAnonymousID:abc123/alias",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "subscribers", "$RCAnonymousID:abc123", "alias"]
+            }
+          }
+        },
+        {
+          "name": "Delete Subscriber (GDPR)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscribers/user_12345",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "subscribers", "user_12345"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Entitlements",
+      "item": [
+        {
+          "name": "List Entitlements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "entitlements"]
+            }
+          }
+        },
+        {
+          "name": "Create Entitlement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"premium\",\n  \"display_name\": \"Premium Access\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "entitlements"]
+            }
+          }
+        },
+        {
+          "name": "Map Product to Entitlement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"com.app.premium_monthly\",\n  \"platform\": \"ios\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements/premium/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "entitlements", "premium", "products"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offerings",
+      "item": [
+        {
+          "name": "Get Current Offerings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/offerings?app_user_id=user_12345",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "offerings"],
+              "query": [
+                {
+                  "key": "app_user_id",
+                  "value": "user_12345"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Offering by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/offerings/default",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "offerings", "default"]
+            }
+          }
+        },
+        {
+          "name": "Create Offering",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"default\",\n  \"display_name\": \"Default Offering\",\n  \"description\": \"Standard subscription options\",\n  \"is_current\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/offerings",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "offerings"]
+            }
+          }
+        },
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "products"]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"store_product_id\": \"com.app.premium_monthly\",\n  \"platform\": \"ios\",\n  \"product_type\": \"subscription\",\n  \"display_name\": \"Premium Monthly\",\n  \"default_price_amount\": 999,\n  \"default_price_currency\": \"USD\",\n  \"subscription_period\": \"P1M\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "products"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "List Webhooks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "webhooks"]
+            }
+          }
+        },
+        {
+          "name": "Create Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://your-server.com/webhooks/paycat\",\n  \"events\": [\"initial_purchase\", \"renewal\", \"cancellation\", \"expiration\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "webhooks"]
+            }
+          }
+        },
+        {
+          "name": "Get Webhook Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/webhook_id/deliveries",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "webhooks", "webhook_id", "deliveries"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Integrations",
+      "item": [
+        {
+          "name": "List Integrations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/integrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "integrations"]
+            }
+          }
+        },
+        {
+          "name": "Create Amplitude Integration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"amplitude\",\n  \"name\": \"Amplitude Production\",\n  \"config\": {\n    \"apiKey\": \"your_amplitude_api_key\"\n  },\n  \"events\": [\"*\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/integrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "integrations"]
+            }
+          }
+        },
+        {
+          "name": "Create Slack Integration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"slack\",\n  \"name\": \"Revenue Notifications\",\n  \"config\": {\n    \"webhookUrl\": \"https://hooks.slack.com/services/xxx/yyy/zzz\"\n  },\n  \"events\": [\"initial_purchase\", \"renewal\", \"cancellation\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/integrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "integrations"]
+            }
+          }
+        },
+        {
+          "name": "Test Integration",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/integrations/integration_id/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "integrations", "integration_id", "test"]
+            }
+          }
+        },
+        {
+          "name": "Track Custom Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"app_user_id\": \"user_12345\",\n  \"event_name\": \"paywall_viewed\",\n  \"properties\": {\n    \"paywall_id\": \"main_paywall\",\n    \"source\": \"onboarding\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "events"]
+            }
+          }
+        },
+        {
+          "name": "List Custom Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/events?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "events"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/overview?period=30d",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "overview"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "30d"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Revenue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/revenue?granularity=day",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "revenue"],
+              "query": [
+                {
+                  "key": "granularity",
+                  "value": "day"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Cohort Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/cohort",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "cohort"]
+            }
+          }
+        },
+        {
+          "name": "Get LTV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/ltv",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "ltv"]
+            }
+          }
+        },
+        {
+          "name": "Get MRR",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/mrr",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "mrr"]
+            }
+          }
+        },
+        {
+          "name": "Get Churn",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/churn?period=30d",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "churn"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "30d"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export Subscribers CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/export/subscribers",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "export", "subscribers"]
+            }
+          }
+        },
+        {
+          "name": "Export Transactions CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/export/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "export", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Export Revenue CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/analytics/export/revenue",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "analytics", "export", "revenue"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Setup (First Run)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"your_secure_password\",\n  \"name\": \"Admin User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "setup"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('adminToken', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"your_secure_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "List Apps",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/apps",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "apps"]
+            }
+          }
+        },
+        {
+          "name": "Create App",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Awesome App\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/apps",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "apps"]
+            }
+          }
+        },
+        {
+          "name": "Configure Apple",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key_id\": \"ABC123DEFG\",\n  \"issuer_id\": \"12345678-1234-1234-1234-123456789012\",\n  \"bundle_id\": \"com.example.app\",\n  \"private_key\": \"-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/apps/app_id/apple",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "apps", "app_id", "apple"]
+            }
+          }
+        },
+        {
+          "name": "Configure Google",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_name\": \"com.example.app\",\n  \"service_account_json\": \"{\\\"type\\\":\\\"service_account\\\",...}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/apps/app_id/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "apps", "app_id", "google"]
+            }
+          }
+        },
+        {
+          "name": "Configure Stripe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"secret_key\": \"sk_live_xxx\",\n  \"webhook_secret\": \"whsec_xxx\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/apps/app_id/stripe",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "apps", "app_id", "stripe"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

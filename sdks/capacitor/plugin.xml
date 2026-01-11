@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="cordova-plugin-paycat"
+        version="1.0.0">
+
+    <name>PayCat</name>
+    <description>PayCat SDK for Cordova - Unified Payment & Subscription Management</description>
+    <license>MIT</license>
+    <keywords>cordova,paycat,subscriptions,in-app-purchases,payments</keywords>
+    <repo>https://github.com/anthropic/paycat-cordova.git</repo>
+    <issue>https://github.com/anthropic/paycat-cordova/issues</issue>
+
+    <engines>
+        <engine name="cordova" version=">=10.0.0"/>
+        <engine name="cordova-ios" version=">=6.0.0"/>
+        <engine name="cordova-android" version=">=10.0.0"/>
+    </engines>
+
+    <js-module src="www/PayCat.js" name="PayCat">
+        <clobbers target="PayCat"/>
+    </js-module>
+
+    <!-- iOS Platform -->
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="PayCat">
+                <param name="ios-package" value="PayCatPlugin"/>
+            </feature>
+        </config-file>
+
+        <header-file src="src/ios/PayCatPlugin.h"/>
+        <source-file src="src/ios/PayCatPlugin.m"/>
+
+        <!-- StoreKit framework for in-app purchases -->
+        <framework src="StoreKit.framework"/>
+
+        <!-- Privacy manifest -->
+        <config-file target="*-Info.plist" parent="NSAppTransportSecurity">
+            <dict>
+                <key>NSAllowsArbitraryLoads</key>
+                <false/>
+                <key>NSExceptionDomains</key>
+                <dict>
+                    <key>paycat.dev</key>
+                    <dict>
+                        <key>NSIncludesSubdomains</key>
+                        <true/>
+                        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                        <false/>
+                    </dict>
+                </dict>
+            </dict>
+        </config-file>
+    </platform>
+
+    <!-- Android Platform -->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="PayCat">
+                <param name="android-package" value="dev.paycat.cordova.PayCatPlugin"/>
+            </feature>
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="com.android.vending.BILLING"/>
+        </config-file>
+
+        <source-file src="src/android/PayCatPlugin.java" target-dir="src/dev/paycat/cordova"/>
+
+        <!-- Google Play Billing Library -->
+        <framework src="com.android.billingclient:billing:6.0.1" custom="false"/>
+    </platform>
+
+</plugin>

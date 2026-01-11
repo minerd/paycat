@@ -352,3 +352,350 @@ analyticsRouter.get('/churn', async (c) => {
     active_subscribers: activeCount,
   });
 });
+
+// =====================================================
+// CSV EXPORT ENDPOINTS
+// =====================================================
+
+/**
+ * GET /v1/analytics/export/subscribers
+ * Export subscribers as CSV
+ */
+analyticsRouter.get('/export/subscribers', async (c) => {
+  const app = c.get('app');
+  const status = c.req.query('status');
+  const platform = c.req.query('platform');
+  const limit = Math.min(parseInt(c.req.query('limit') || '10000'), 50000);
+
+  let query = `
+    SELECT
+      s.app_user_id,
+      s.first_seen_at,
+      s.last_seen_at,
+      sub.product_id,
+      sub.platform,
+      sub.status,
+      sub.purchase_date,
+      sub.expires_at,
+      sub.is_trial,
+      sub.is_sandbox,
+      sub.will_renew,
+      sub.price_amount,
+      sub.price_currency
+    FROM subscribers s
+    LEFT JOIN subscriptions sub ON sub.subscriber_id = s.id
+    WHERE s.app_id = ?
+  `;
+  const params: (string | number)[] = [app.id];
+
+  if (status) {
+    query += ' AND sub.status = ?';
+    params.push(status);
+  }
+
+  if (platform) {
+    query += ' AND sub.platform = ?';
+    params.push(platform);
+  }
+
+  query += ' ORDER BY s.created_at DESC LIMIT ?';
+  params.push(limit);
+
+  const result = await c.env.DB.prepare(query).bind(...params).all();
+
+  // Build CSV
+  const headers = [
+    'app_user_id',
+    'first_seen_at',
+    'last_seen_at',
+    'product_id',
+    'platform',
+    'status',
+    'purchase_date',
+    'expires_at',
+    'is_trial',
+    'is_sandbox',
+    'will_renew',
+    'price_amount',
+    'price_currency',
+  ];
+
+  const rows = (result.results || []).map((row: any) => [
+    row.app_user_id || '',
+    row.first_seen_at ? toISOString(row.first_seen_at) : '',
+    row.last_seen_at ? toISOString(row.last_seen_at) : '',
+    row.product_id || '',
+    row.platform || '',
+    row.status || '',
+    row.purchase_date ? toISOString(row.purchase_date) : '',
+    row.expires_at ? toISOString(row.expires_at) : '',
+    row.is_trial ? 'true' : 'false',
+    row.is_sandbox ? 'true' : 'false',
+    row.will_renew ? 'true' : 'false',
+    row.price_amount ? (row.price_amount / 100).toFixed(2) : '',
+    row.price_currency || '',
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCSV).join(','))].join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="subscribers_${Date.now()}.csv"`,
+    },
+  });
+});
+
+/**
+ * GET /v1/analytics/export/transactions
+ * Export transactions as CSV
+ */
+analyticsRouter.get('/export/transactions', async (c) => {
+  const app = c.get('app');
+  const startParam = c.req.query('start');
+  const endParam = c.req.query('end');
+  const platform = c.req.query('platform');
+  const limit = Math.min(parseInt(c.req.query('limit') || '10000'), 50000);
+
+  const endDate = endParam ? new Date(endParam).getTime() : now();
+  const startDate = startParam
+    ? new Date(startParam).getTime()
+    : endDate - 90 * 24 * 60 * 60 * 1000;
+
+  let query = `
+    SELECT
+      t.transaction_id,
+      t.original_transaction_id,
+      t.product_id,
+      t.platform,
+      t.type,
+      t.purchase_date,
+      t.expires_date,
+      t.revenue_amount,
+      t.revenue_currency,
+      t.is_refunded,
+      t.refund_date,
+      s.app_user_id
+    FROM transactions t
+    LEFT JOIN subscriptions sub ON sub.id = t.subscription_id
+    LEFT JOIN subscribers s ON s.id = sub.subscriber_id
+    WHERE t.app_id = ?
+      AND t.purchase_date >= ?
+      AND t.purchase_date <= ?
+  `;
+  const params: (string | number)[] = [app.id, startDate, endDate];
+
+  if (platform) {
+    query += ' AND t.platform = ?';
+    params.push(platform);
+  }
+
+  query += ' ORDER BY t.purchase_date DESC LIMIT ?';
+  params.push(limit);
+
+  const result = await c.env.DB.prepare(query).bind(...params).all();
+
+  const headers = [
+    'transaction_id',
+    'original_transaction_id',
+    'app_user_id',
+    'product_id',
+    'platform',
+    'type',
+    'purchase_date',
+    'expires_date',
+    'revenue_amount',
+    'revenue_currency',
+    'is_refunded',
+    'refund_date',
+  ];
+
+  const rows = (result.results || []).map((row: any) => [
+    row.transaction_id || '',
+    row.original_transaction_id || '',
+    row.app_user_id || '',
+    row.product_id || '',
+    row.platform || '',
+    row.type || '',
+    row.purchase_date ? toISOString(row.purchase_date) : '',
+    row.expires_date ? toISOString(row.expires_date) : '',
+    row.revenue_amount ? (row.revenue_amount / 100).toFixed(2) : '',
+    row.revenue_currency || '',
+    row.is_refunded ? 'true' : 'false',
+    row.refund_date ? toISOString(row.refund_date) : '',
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCSV).join(','))].join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="transactions_${Date.now()}.csv"`,
+    },
+  });
+});
+
+/**
+ * GET /v1/analytics/export/revenue
+ * Export revenue data as CSV
+ */
+analyticsRouter.get('/export/revenue', async (c) => {
+  const app = c.get('app');
+  const startParam = c.req.query('start');
+  const endParam = c.req.query('end');
+  const granularity = (c.req.query('granularity') || 'day') as 'day' | 'week' | 'month';
+
+  const endDate = endParam ? new Date(endParam).getTime() : now();
+  const startDate = startParam
+    ? new Date(startParam).getTime()
+    : endDate - 365 * 24 * 60 * 60 * 1000;
+
+  const data = await getRevenueTimeSeries(c.env.DB, app.id, startDate, endDate, granularity);
+
+  const headers = ['date', 'platform', 'revenue', 'transactions'];
+
+  const rows = data.map((row) => [
+    row.date,
+    row.platform,
+    (row.revenue / 100).toFixed(2),
+    row.count.toString(),
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCSV).join(','))].join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="revenue_${Date.now()}.csv"`,
+    },
+  });
+});
+
+/**
+ * GET /v1/analytics/export/events
+ * Export analytics events as CSV
+ */
+analyticsRouter.get('/export/events', async (c) => {
+  const app = c.get('app');
+  const startParam = c.req.query('start');
+  const endParam = c.req.query('end');
+  const eventType = c.req.query('event_type');
+  const limit = Math.min(parseInt(c.req.query('limit') || '10000'), 50000);
+
+  const endDate = endParam ? new Date(endParam).getTime() : now();
+  const startDate = startParam
+    ? new Date(startParam).getTime()
+    : endDate - 90 * 24 * 60 * 60 * 1000;
+
+  let query = `
+    SELECT
+      ae.id,
+      ae.event_type,
+      ae.event_date,
+      ae.product_id,
+      ae.platform,
+      ae.revenue_amount,
+      ae.revenue_currency,
+      s.app_user_id
+    FROM analytics_events ae
+    LEFT JOIN subscribers s ON s.id = ae.subscriber_id
+    WHERE ae.app_id = ?
+      AND ae.event_date >= ?
+      AND ae.event_date <= ?
+  `;
+  const params: (string | number)[] = [app.id, startDate, endDate];
+
+  if (eventType) {
+    query += ' AND ae.event_type = ?';
+    params.push(eventType);
+  }
+
+  query += ' ORDER BY ae.event_date DESC LIMIT ?';
+  params.push(limit);
+
+  const result = await c.env.DB.prepare(query).bind(...params).all();
+
+  const headers = [
+    'event_id',
+    'event_type',
+    'event_date',
+    'app_user_id',
+    'product_id',
+    'platform',
+    'revenue_amount',
+    'revenue_currency',
+  ];
+
+  const rows = (result.results || []).map((row: any) => [
+    row.id || '',
+    row.event_type || '',
+    row.event_date ? toISOString(row.event_date) : '',
+    row.app_user_id || '',
+    row.product_id || '',
+    row.platform || '',
+    row.revenue_amount ? (row.revenue_amount / 100).toFixed(2) : '',
+    row.revenue_currency || '',
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCSV).join(','))].join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="events_${Date.now()}.csv"`,
+    },
+  });
+});
+
+/**
+ * GET /v1/analytics/export/mrr
+ * Export MRR history as CSV
+ */
+analyticsRouter.get('/export/mrr', async (c) => {
+  const app = c.get('app');
+
+  // Get MRR breakdown by product and platform
+  const result = await c.env.DB.prepare(
+    `SELECT
+       product_id,
+       platform,
+       price_currency,
+       SUM(price_amount) as mrr,
+       COUNT(*) as subscribers
+     FROM subscriptions
+     WHERE app_id = ?
+       AND status = 'active'
+       AND price_amount IS NOT NULL
+     GROUP BY product_id, platform, price_currency
+     ORDER BY mrr DESC`
+  )
+    .bind(app.id)
+    .all();
+
+  const headers = ['product_id', 'platform', 'currency', 'mrr', 'subscribers'];
+
+  const rows = (result.results || []).map((row: any) => [
+    row.product_id || '',
+    row.platform || '',
+    row.price_currency || 'USD',
+    ((row.mrr || 0) / 100).toFixed(2),
+    row.subscribers.toString(),
+  ]);
+
+  const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCSV).join(','))].join('\n');
+
+  return new Response(csv, {
+    headers: {
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="mrr_${Date.now()}.csv"`,
+    },
+  });
+});
+
+// Helper function to escape CSV values
+function escapeCSV(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}

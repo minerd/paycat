@@ -1,0 +1,23 @@
+{
+  "name": "com.paycat.sdk",
+  "version": "1.0.0",
+  "displayName": "PayCat SDK",
+  "description": "Unified subscription management for Unity games - iOS, Android, and Web support",
+  "unity": "2020.3",
+  "unityRelease": "0f1",
+  "documentationUrl": "https://github.com/your-org/paycat",
+  "changelogUrl": "https://github.com/your-org/paycat/releases",
+  "licensesUrl": "https://github.com/your-org/paycat/blob/main/LICENSE",
+  "keywords": [
+    "subscriptions",
+    "in-app-purchases",
+    "iap",
+    "monetization",
+    "paycat"
+  ],
+  "author": {
+    "name": "PayCat",
+    "url": "https://paycat.dev"
+  },
+  "dependencies": {}
+}

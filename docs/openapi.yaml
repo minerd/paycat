@@ -1,0 +1,1077 @@
+openapi: 3.1.0
+info:
+  title: PayCat API
+  description: |
+    Unified Payment & Subscription Management System.
+    A RevenueCat-compatible API for managing in-app purchases across iOS, Android, and Web (Stripe).
+  version: 1.0.0
+  contact:
+    name: PayCat Support
+  license:
+    name: MIT
+
+servers:
+  - url: https://your-worker.workers.dev
+    description: Production
+  - url: http://localhost:8787
+    description: Local Development
+
+tags:
+  - name: Receipts
+    description: Receipt verification and subscription sync
+  - name: Subscribers
+    description: Subscriber management
+  - name: Subscriptions
+    description: Subscription management
+  - name: Entitlements
+    description: Entitlement configuration
+  - name: Offerings
+    description: Remote product configuration
+  - name: Webhooks
+    description: Webhook management
+  - name: Integrations
+    description: Third-party integrations
+  - name: Analytics
+    description: Analytics and reporting
+  - name: Admin
+    description: Admin panel operations
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /:
+    get:
+      summary: Health check
+      description: Returns API status
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: PayCat
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /v1/receipts:
+    post:
+      tags: [Receipts]
+      summary: Verify receipt
+      description: Verify a purchase receipt and sync subscription status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptRequest'
+      responses:
+        '200':
+          description: Receipt verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/subscribers/{app_user_id}:
+    get:
+      tags: [Subscribers]
+      summary: Get subscriber
+      description: Get subscriber information including subscriptions and entitlements
+      parameters:
+        - name: app_user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Your app's user ID
+      responses:
+        '200':
+          description: Subscriber found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Subscribers]
+      summary: Delete subscriber
+      description: Delete subscriber and all associated data (GDPR)
+      parameters:
+        - name: app_user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscriber deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                    example: true
+
+  /v1/subscribers/{app_user_id}/attributes:
+    post:
+      tags: [Subscribers]
+      summary: Update subscriber attributes
+      description: Set custom attributes on a subscriber
+      parameters:
+        - name: app_user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                attributes:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    $email: "user@example.com"
+                    $displayName: "John Doe"
+                    custom_field: "value"
+      responses:
+        '200':
+          description: Attributes updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberResponse'
+
+  /v1/subscribers/{app_user_id}/alias:
+    post:
+      tags: [Subscribers]
+      summary: Create alias
+      description: Create an alias for a subscriber (merge anonymous with identified)
+      parameters:
+        - name: app_user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_app_user_id]
+              properties:
+                new_app_user_id:
+                  type: string
+                  description: The new user ID to alias to
+      responses:
+        '200':
+          description: Alias created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriberResponse'
+
+  /v1/entitlements:
+    get:
+      tags: [Entitlements]
+      summary: List entitlement definitions
+      responses:
+        '200':
+          description: List of entitlements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entitlements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EntitlementDefinition'
+
+    post:
+      tags: [Entitlements]
+      summary: Create entitlement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier]
+              properties:
+                identifier:
+                  type: string
+                  example: premium
+                display_name:
+                  type: string
+                  example: Premium Access
+      responses:
+        '201':
+          description: Entitlement created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entitlement:
+                    $ref: '#/components/schemas/EntitlementDefinition'
+
+  /v1/entitlements/{identifier}/products:
+    post:
+      tags: [Entitlements]
+      summary: Map product to entitlement
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, platform]
+              properties:
+                product_id:
+                  type: string
+                  example: com.app.premium_monthly
+                platform:
+                  type: string
+                  enum: [ios, android, stripe]
+      responses:
+        '201':
+          description: Product mapped
+
+  /v1/offerings:
+    get:
+      tags: [Offerings]
+      summary: Get offerings
+      description: Get current offerings configuration for the requesting user
+      parameters:
+        - name: app_user_id
+          in: query
+          schema:
+            type: string
+          description: User ID for targeted offerings
+      responses:
+        '200':
+          description: Offerings configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferingsResponse'
+
+    post:
+      tags: [Offerings]
+      summary: Create offering
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier]
+              properties:
+                identifier:
+                  type: string
+                display_name:
+                  type: string
+                description:
+                  type: string
+                is_current:
+                  type: boolean
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Offering created
+
+  /v1/offerings/{identifier}:
+    get:
+      tags: [Offerings]
+      summary: Get offering by identifier
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Offering details
+
+  /v1/products:
+    get:
+      tags: [Offerings]
+      summary: List products
+      responses:
+        '200':
+          description: List of products
+
+    post:
+      tags: [Offerings]
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+      responses:
+        '201':
+          description: Product created
+
+  /v1/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhooks
+      responses:
+        '200':
+          description: List of webhooks
+
+    post:
+      tags: [Webhooks]
+      summary: Create webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - "*"
+                      - initial_purchase
+                      - renewal
+                      - cancellation
+                      - expiration
+                      - billing_issue
+                      - refund
+      responses:
+        '201':
+          description: Webhook created
+
+  /v1/integrations:
+    get:
+      tags: [Integrations]
+      summary: List integrations
+      responses:
+        '200':
+          description: List of integrations
+
+    post:
+      tags: [Integrations]
+      summary: Create integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationCreate'
+      responses:
+        '201':
+          description: Integration created
+
+  /v1/integrations/{id}/test:
+    post:
+      tags: [Integrations]
+      summary: Test integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test result
+
+  /v1/events:
+    get:
+      tags: [Integrations]
+      summary: List custom events
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: event_name
+          in: query
+          schema:
+            type: string
+        - name: app_user_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of events
+
+    post:
+      tags: [Integrations]
+      summary: Track custom event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [app_user_id, event_name]
+              properties:
+                app_user_id:
+                  type: string
+                event_name:
+                  type: string
+                properties:
+                  type: object
+                timestamp:
+                  type: integer
+      responses:
+        '201':
+          description: Event tracked
+
+  /v1/analytics/overview:
+    get:
+      tags: [Analytics]
+      summary: Get analytics overview
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            default: "30d"
+          description: Time period (7d, 30d, 90d, 12m)
+      responses:
+        '200':
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverview'
+
+  /v1/analytics/revenue:
+    get:
+      tags: [Analytics]
+      summary: Get revenue time series
+      parameters:
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Revenue data
+
+  /v1/analytics/cohort:
+    get:
+      tags: [Analytics]
+      summary: Get cohort analysis
+      parameters:
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Cohort data
+
+  /v1/analytics/ltv:
+    get:
+      tags: [Analytics]
+      summary: Get LTV metrics
+      parameters:
+        - name: product_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: LTV data
+
+  /v1/analytics/export/subscribers:
+    get:
+      tags: [Analytics]
+      summary: Export subscribers CSV
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10000
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /v1/analytics/export/transactions:
+    get:
+      tags: [Analytics]
+      summary: Export transactions CSV
+      parameters:
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: platform
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /v1/analytics/export/revenue:
+    get:
+      tags: [Analytics]
+      summary: Export revenue CSV
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /v1/analytics/export/events:
+    get:
+      tags: [Analytics]
+      summary: Export events CSV
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /v1/notifications/apple:
+    post:
+      tags: [Webhooks]
+      summary: Apple S2S Notifications
+      description: Endpoint for Apple App Store Server Notifications V2
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signedPayload:
+                  type: string
+      responses:
+        '200':
+          description: Notification processed
+
+  /v1/notifications/google:
+    post:
+      tags: [Webhooks]
+      summary: Google RTDN
+      description: Endpoint for Google Real-time Developer Notifications
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: object
+                  properties:
+                    data:
+                      type: string
+                subscription:
+                  type: string
+      responses:
+        '200':
+          description: Notification processed
+
+  /v1/notifications/stripe:
+    post:
+      tags: [Webhooks]
+      summary: Stripe Webhooks
+      description: Endpoint for Stripe webhook events
+      security: []
+      responses:
+        '200':
+          description: Webhook processed
+
+  /admin/login:
+    post:
+      tags: [Admin]
+      summary: Admin login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+
+  /admin/setup:
+    post:
+      tags: [Admin]
+      summary: Initial admin setup
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Admin created
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Dashboard stats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+
+  /admin/apps:
+    get:
+      tags: [Admin]
+      summary: List apps
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of apps
+
+    post:
+      tags: [Admin]
+      summary: Create app
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: App created
+
+  /admin/stream:
+    get:
+      tags: [Admin]
+      summary: Real-time updates (SSE)
+      description: Server-Sent Events endpoint for real-time dashboard updates
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for your app (pk_live_xxx or pk_test_xxx)
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Admin session token
+
+  schemas:
+    ReceiptRequest:
+      type: object
+      required: [app_user_id, platform, receipt_data]
+      properties:
+        app_user_id:
+          type: string
+          description: Your app's user identifier
+        platform:
+          type: string
+          enum: [ios, android, stripe]
+        fetch_policy:
+          type: string
+          enum: [cache_only, fetch_current, cache_or_fetch]
+          default: cache_or_fetch
+        receipt_data:
+          type: object
+          description: Platform-specific receipt data
+          oneOf:
+            - type: object
+              properties:
+                transaction_id:
+                  type: string
+              description: iOS receipt
+            - type: object
+              properties:
+                purchase_token:
+                  type: string
+                product_id:
+                  type: string
+              description: Android receipt
+            - type: object
+              properties:
+                subscription_id:
+                  type: string
+              description: Stripe subscription
+
+    SubscriberResponse:
+      type: object
+      properties:
+        subscriber:
+          type: object
+          properties:
+            original_app_user_id:
+              type: string
+            first_seen:
+              type: string
+              format: date-time
+            last_seen:
+              type: string
+              format: date-time
+            subscriptions:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/Subscription'
+            entitlements:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/Entitlement'
+            attributes:
+              type: object
+
+    Subscription:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [ios, android, stripe]
+        product_id:
+          type: string
+        status:
+          type: string
+          enum: [active, expired, cancelled, grace_period, billing_retry]
+        purchase_date:
+          type: string
+          format: date-time
+        expires_date:
+          type: string
+          format: date-time
+        is_sandbox:
+          type: boolean
+        is_trial_period:
+          type: boolean
+        will_renew:
+          type: boolean
+        grace_period_expires_date:
+          type: string
+          format: date-time
+
+    Entitlement:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        product_identifier:
+          type: string
+        expires_date:
+          type: string
+          format: date-time
+
+    EntitlementDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+        identifier:
+          type: string
+        display_name:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+              platform:
+                type: string
+
+    OfferingsResponse:
+      type: object
+      properties:
+        current_offering_id:
+          type: string
+        offerings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Offering'
+
+    Offering:
+      type: object
+      properties:
+        identifier:
+          type: string
+        description:
+          type: string
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+
+    Package:
+      type: object
+      properties:
+        identifier:
+          type: string
+        package_type:
+          type: string
+          enum: [monthly, annual, weekly, lifetime, custom]
+        product:
+          $ref: '#/components/schemas/Product'
+
+    Product:
+      type: object
+      properties:
+        store_product_id:
+          type: string
+        platform:
+          type: string
+        product_type:
+          type: string
+        price:
+          type: object
+          properties:
+            amount:
+              type: number
+            currency:
+              type: string
+
+    ProductCreate:
+      type: object
+      required: [store_product_id, platform, product_type]
+      properties:
+        store_product_id:
+          type: string
+        platform:
+          type: string
+          enum: [ios, android, stripe]
+        product_type:
+          type: string
+          enum: [subscription, consumable, non_consumable]
+        display_name:
+          type: string
+        description:
+          type: string
+        default_price_amount:
+          type: integer
+        default_price_currency:
+          type: string
+        subscription_period:
+          type: string
+        trial_period:
+          type: string
+
+    IntegrationCreate:
+      type: object
+      required: [type, name, config]
+      properties:
+        type:
+          type: string
+          enum: [amplitude, mixpanel, segment, firebase, braze, slack, appsflyer, adjust, webhook]
+        name:
+          type: string
+        config:
+          type: object
+          description: Type-specific configuration
+        events:
+          type: array
+          items:
+            type: string
+
+    AnalyticsOverview:
+      type: object
+      properties:
+        mrr:
+          type: number
+        active_subscribers:
+          type: integer
+        active_trials:
+          type: integer
+        churn_rate:
+          type: number
+        new_subscribers:
+          type: integer
+        conversions:
+          type: integer
+        refunds:
+          type: integer
+        revenue_by_platform:
+          type: object
+          additionalProperties:
+            type: number
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: validation_error
+              message: "Invalid request parameters"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: unauthorized
+              message: "Invalid or missing API key"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: not_found
+              message: "Resource not found"

@@ -787,3 +787,216 @@ adminRouter.get('/subscribers/:id', async (c) => {
     transactions: transactions.results || [],
   });
 });
+
+// ============ Real-time Updates (SSE) ============
+
+/**
+ * GET /admin/stream
+ * Server-Sent Events endpoint for real-time dashboard updates
+ */
+adminRouter.use('/stream', adminAuthMiddleware);
+adminRouter.get('/stream', async (c) => {
+  const encoder = new TextEncoder();
+
+  // Create a readable stream for SSE
+  const stream = new ReadableStream({
+    async start(controller) {
+      // Send initial connection message
+      const initialData = JSON.stringify({
+        type: 'connected',
+        timestamp: Date.now(),
+      });
+      controller.enqueue(encoder.encode(`data: ${initialData}\n\n`));
+
+      // Poll for updates every 5 seconds
+      let running = true;
+      let lastCheck = Date.now();
+
+      const poll = async () => {
+        if (!running) return;
+
+        try {
+          // Get recent events since last check
+          const recentEvents = await c.env.DB.prepare(
+            `SELECT ae.*, s.app_user_id
+             FROM analytics_events ae
+             LEFT JOIN subscribers s ON s.id = ae.subscriber_id
+             WHERE ae.created_at > ?
+             ORDER BY ae.created_at DESC
+             LIMIT 10`
+          )
+            .bind(lastCheck)
+            .all();
+
+          // Get recent transactions
+          const recentTransactions = await c.env.DB.prepare(
+            `SELECT t.*, sub.product_id
+             FROM transactions t
+             LEFT JOIN subscriptions sub ON sub.id = t.subscription_id
+             WHERE t.created_at > ?
+             ORDER BY t.created_at DESC
+             LIMIT 10`
+          )
+            .bind(lastCheck)
+            .all();
+
+          // Get current stats
+          const [activeCount, mrrResult] = await Promise.all([
+            c.env.DB.prepare("SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'").first<{ count: number }>(),
+            c.env.DB.prepare(
+              "SELECT SUM(price_amount) as total FROM subscriptions WHERE status = 'active' AND price_amount IS NOT NULL"
+            ).first<{ total: number }>(),
+          ]);
+
+          lastCheck = Date.now();
+
+          // Send update if there's new data
+          if ((recentEvents.results?.length || 0) > 0 || (recentTransactions.results?.length || 0) > 0) {
+            const eventData = JSON.stringify({
+              type: 'update',
+              timestamp: lastCheck,
+              events: recentEvents.results || [],
+              transactions: recentTransactions.results || [],
+              stats: {
+                active_subscriptions: activeCount?.count || 0,
+                mrr: ((mrrResult?.total || 0) / 100).toFixed(2),
+              },
+            });
+            controller.enqueue(encoder.encode(`data: ${eventData}\n\n`));
+          } else {
+            // Send heartbeat
+            const heartbeat = JSON.stringify({
+              type: 'heartbeat',
+              timestamp: lastCheck,
+              stats: {
+                active_subscriptions: activeCount?.count || 0,
+                mrr: ((mrrResult?.total || 0) / 100).toFixed(2),
+              },
+            });
+            controller.enqueue(encoder.encode(`data: ${heartbeat}\n\n`));
+          }
+
+          // Schedule next poll
+          setTimeout(poll, 5000);
+        } catch (error) {
+          console.error('SSE poll error:', error);
+          // Try again after error
+          setTimeout(poll, 10000);
+        }
+      };
+
+      // Start polling
+      poll();
+
+      // Cleanup on close (handled by Cloudflare Workers)
+      // Note: In production, you might want to use Durable Objects for better connection management
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+});
+
+/**
+ * GET /admin/stream/app/:id
+ * SSE endpoint for app-specific real-time updates
+ */
+adminRouter.use('/stream/app/*', adminAuthMiddleware);
+adminRouter.get('/stream/app/:id', async (c) => {
+  const appId = c.req.param('id');
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const initialData = JSON.stringify({
+        type: 'connected',
+        app_id: appId,
+        timestamp: Date.now(),
+      });
+      controller.enqueue(encoder.encode(`data: ${initialData}\n\n`));
+
+      let lastCheck = Date.now();
+
+      const poll = async () => {
+        try {
+          // Get app-specific recent events
+          const recentEvents = await c.env.DB.prepare(
+            `SELECT ae.*, s.app_user_id
+             FROM analytics_events ae
+             LEFT JOIN subscribers s ON s.id = ae.subscriber_id
+             WHERE ae.app_id = ? AND ae.created_at > ?
+             ORDER BY ae.created_at DESC
+             LIMIT 10`
+          )
+            .bind(appId, lastCheck)
+            .all();
+
+          // Get app-specific recent transactions
+          const recentTransactions = await c.env.DB.prepare(
+            `SELECT t.*, sub.product_id
+             FROM transactions t
+             LEFT JOIN subscriptions sub ON sub.id = t.subscription_id
+             WHERE t.app_id = ? AND t.created_at > ?
+             ORDER BY t.created_at DESC
+             LIMIT 10`
+          )
+            .bind(appId, lastCheck)
+            .all();
+
+          // Get app stats
+          const [activeCount, mrrResult, subscriberCount] = await Promise.all([
+            c.env.DB.prepare("SELECT COUNT(*) as count FROM subscriptions WHERE app_id = ? AND status = 'active'")
+              .bind(appId)
+              .first<{ count: number }>(),
+            c.env.DB.prepare(
+              "SELECT SUM(price_amount) as total FROM subscriptions WHERE app_id = ? AND status = 'active' AND price_amount IS NOT NULL"
+            )
+              .bind(appId)
+              .first<{ total: number }>(),
+            c.env.DB.prepare('SELECT COUNT(*) as count FROM subscribers WHERE app_id = ?')
+              .bind(appId)
+              .first<{ count: number }>(),
+          ]);
+
+          lastCheck = Date.now();
+
+          const hasNewData = (recentEvents.results?.length || 0) > 0 || (recentTransactions.results?.length || 0) > 0;
+
+          const eventData = JSON.stringify({
+            type: hasNewData ? 'update' : 'heartbeat',
+            app_id: appId,
+            timestamp: lastCheck,
+            events: hasNewData ? recentEvents.results : undefined,
+            transactions: hasNewData ? recentTransactions.results : undefined,
+            stats: {
+              active_subscriptions: activeCount?.count || 0,
+              total_subscribers: subscriberCount?.count || 0,
+              mrr: ((mrrResult?.total || 0) / 100).toFixed(2),
+            },
+          });
+          controller.enqueue(encoder.encode(`data: ${eventData}\n\n`));
+
+          setTimeout(poll, 5000);
+        } catch (error) {
+          console.error('SSE poll error:', error);
+          setTimeout(poll, 10000);
+        }
+      };
+
+      poll();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  });
+});
