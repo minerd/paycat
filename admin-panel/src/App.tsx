@@ -1,0 +1,77 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { api } from './lib/api';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Setup from './pages/Setup';
+import Dashboard from './pages/Dashboard';
+import Apps from './pages/Apps';
+import AppDetail from './pages/AppDetail';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  if (!api.isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+export default function App() {
+  const [loading, setLoading] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+
+  useEffect(() => {
+    // Check if we need initial setup
+    const checkSetup = async () => {
+      try {
+        // Try to access dashboard - if it fails with 401, check if setup is needed
+        if (api.isAuthenticated()) {
+          await api.getMe();
+        }
+      } catch {
+        // If not authenticated, check if setup is needed
+        try {
+          await api.setup('test@test.com', 'test1234');
+          // If setup works, we need setup
+          setNeedsSetup(true);
+          api.setToken(null);
+        } catch (e) {
+          // Setup failed - admin exists
+          if ((e as Error).message.includes('already exists')) {
+            setNeedsSetup(false);
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    checkSetup();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/setup" element={needsSetup ? <Setup /> : <Navigate to="/login" replace />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="apps" element={<Apps />} />
+        <Route path="apps/:id" element={<AppDetail />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

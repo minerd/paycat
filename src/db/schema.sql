@@ -142,3 +142,29 @@ CREATE INDEX IF NOT EXISTS idx_transactions_tx_id ON transactions(transaction_id
 CREATE INDEX IF NOT EXISTS idx_analytics_date ON analytics_events(app_id, event_date);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook ON webhook_deliveries(webhook_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry ON webhook_deliveries(next_retry_at);
+
+-- Admin Users
+CREATE TABLE IF NOT EXISTS admin_users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT,
+  api_key TEXT UNIQUE,
+  active INTEGER DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+-- Admin Sessions
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id TEXT PRIMARY KEY,
+  admin_user_id TEXT NOT NULL REFERENCES admin_users(id),
+  token TEXT UNIQUE NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email);
+CREATE INDEX IF NOT EXISTS idx_admin_users_api_key ON admin_users(api_key);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires ON admin_sessions(expires_at);

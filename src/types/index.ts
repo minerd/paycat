@@ -240,3 +240,17 @@ export interface AnalyticsOverview {
   refunds: number;
   revenue_by_platform: Record<Platform, number>;
 }
+
+// Admin types
+export interface AdminUser {
+  id: string;
+  email: string;
+}
+
+// Hono context variables
+declare module 'hono' {
+  interface ContextVariableMap {
+    app: App;
+    adminUser: AdminUser;
+  }
+}

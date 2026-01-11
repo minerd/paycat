@@ -23,6 +23,7 @@ import { analyticsRouter } from './routes/analytics';
 import { appleNotificationsRouter } from './routes/notifications/apple';
 import { googleNotificationsRouter } from './routes/notifications/google';
 import { stripeNotificationsRouter } from './routes/notifications/stripe';
+import { adminRouter } from './routes/admin';
 
 // Create main app
 const app = new Hono<{ Bindings: Env }>();
@@ -66,6 +67,9 @@ app.route('/v1', v1);
 app.route('/v1/notifications/apple', appleNotificationsRouter);
 app.route('/v1/notifications/google', googleNotificationsRouter);
 app.route('/v1/notifications/stripe', stripeNotificationsRouter);
+
+// Admin panel endpoints
+app.route('/admin', adminRouter);
 
 // 404 handler
 app.notFound((c) => {
