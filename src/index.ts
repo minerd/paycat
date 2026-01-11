@@ -12,6 +12,7 @@ import type { Env } from './types';
 import { errorMiddleware, PayCatError } from './middleware/error';
 import { loggingMiddleware } from './middleware/logging';
 import { authMiddleware } from './middleware/auth';
+import { rateLimitMiddleware, strictRateLimitMiddleware } from './middleware/rate-limit';
 
 // Import routes
 import { receiptsRouter } from './routes/receipts';
@@ -24,6 +25,7 @@ import { appleNotificationsRouter } from './routes/notifications/apple';
 import { googleNotificationsRouter } from './routes/notifications/google';
 import { stripeNotificationsRouter } from './routes/notifications/stripe';
 import { adminRouter } from './routes/admin';
+import { handleScheduled } from './scheduled';
 
 // Create main app
 const app = new Hono<{ Bindings: Env }>();
@@ -34,6 +36,7 @@ app.use('*', prettyJSON());
 app.use('*', secureHeaders());
 app.use('*', loggingMiddleware);
 app.use('*', errorMiddleware);
+app.use('*', rateLimitMiddleware);
 
 // Health check (no auth required)
 app.get('/', (c) => {
@@ -104,4 +107,8 @@ app.onError((err, c) => {
   );
 });
 
-export default app;
+// Export worker with both fetch and scheduled handlers
+export default {
+  fetch: app.fetch,
+  scheduled: handleScheduled,
+};

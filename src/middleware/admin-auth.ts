@@ -97,7 +97,7 @@ export async function createAdminSession(
 }
 
 /**
- * Verify admin password
+ * Verify admin password using PBKDF2
  */
 export async function verifyAdminPassword(
   db: D1Database,
@@ -111,14 +111,8 @@ export async function verifyAdminPassword(
 
   if (!user) return null;
 
-  // Simple password comparison (in production, use bcrypt or similar)
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-
-  if (hashHex === user.password_hash) {
+  const isValid = await verifyPassword(password, user.password_hash);
+  if (isValid) {
     return { id: user.id, email: user.email };
   }
 
@@ -126,12 +120,98 @@ export async function verifyAdminPassword(
 }
 
 /**
- * Hash password for storage
+ * Hash password for storage using PBKDF2
+ * Format: iterations:salt:hash (all base64 encoded)
  */
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  const iterations = 100000;
+
+  // Generate random salt
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+
+  // Import password as key
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+
+  // Derive key using PBKDF2
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: iterations,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    256
+  );
+
+  // Encode as base64
+  const saltB64 = btoa(String.fromCharCode(...salt));
+  const hashB64 = btoa(String.fromCharCode(...new Uint8Array(derivedBits)));
+
+  return `${iterations}:${saltB64}:${hashB64}`;
+}
+
+/**
+ * Verify password against stored hash
+ */
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+
+  // Check if it's the old SHA-256 format (no colons) for backward compatibility
+  if (!storedHash.includes(':')) {
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    return hashHex === storedHash;
+  }
+
+  // Parse PBKDF2 format
+  const parts = storedHash.split(':');
+  if (parts.length !== 3) return false;
+
+  const iterations = parseInt(parts[0], 10);
+  const salt = Uint8Array.from(atob(parts[1]), (c) => c.charCodeAt(0));
+  const storedHashBytes = Uint8Array.from(atob(parts[2]), (c) => c.charCodeAt(0));
+
+  // Import password as key
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+
+  // Derive key
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: iterations,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    256
+  );
+
+  const derivedBytes = new Uint8Array(derivedBits);
+
+  // Constant-time comparison
+  if (derivedBytes.length !== storedHashBytes.length) return false;
+
+  let result = 0;
+  for (let i = 0; i < derivedBytes.length; i++) {
+    result |= derivedBytes[i] ^ storedHashBytes[i];
+  }
+
+  return result === 0;
 }
