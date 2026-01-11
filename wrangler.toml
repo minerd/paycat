@@ -1,0 +1,22 @@
+name = "paycat"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "paycat-db"
+database_id = "36e38604-505d-4a90-b3d3-57a5679f4ee9"
+
+# KV Namespace for caching
+[[kv_namespaces]]
+binding = "CACHE"
+id = "61b08a26ea8d4348949514c01a6b3900"
+
+# Environment variables (set via wrangler secret)
+# APPLE_PRIVATE_KEY - .p8 key content
+# GOOGLE_SERVICE_ACCOUNT - JSON service account
+# STRIPE_SECRET_KEY - Stripe API key
+
+[vars]
+ENVIRONMENT = "development"
