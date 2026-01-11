@@ -556,12 +556,12 @@ analyticsRouter.get('/export/revenue', async (c) => {
 
   const rows = data.map((row) => [
     row.date,
-    row.platform,
+    row.platform || '',
     (row.revenue / 100).toFixed(2),
     row.count.toString(),
   ]);
 
-  const csv = [headers.join(','), ...rows.map((r) => r.map(escapeCSV).join(','))].join('\n');
+  const csv = [headers.join(','), ...rows.map((r) => r.map((v) => escapeCSV(v)).join(','))].join('\n');
 
   return new Response(csv, {
     headers: {

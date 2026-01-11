@@ -14,7 +14,7 @@ import type {
  */
 export async function parseAmazonNotification(
   body: string,
-  headers: Record<string, string>
+  _headers: Record<string, string>
 ): Promise<{
   type: 'notification' | 'subscription_confirmation' | 'unsubscribe';
   notification?: AmazonNotificationMessage;

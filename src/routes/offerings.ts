@@ -7,7 +7,6 @@ import { Hono } from 'hono';
 import type { Env, App } from '../types';
 import {
   getOfferings,
-  getCurrentOffering,
   getOfferingByIdentifier,
   getTargetedOffering,
   createOffering,

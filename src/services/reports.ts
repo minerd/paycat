@@ -457,10 +457,10 @@ async function runReportQuery(
   db: D1Database,
   appId: string,
   config: ReportConfig,
-  parameters?: Record<string, any>
+  _parameters?: Record<string, any>
 ): Promise<{ data: any[]; count: number }> {
   // Build dynamic query based on config
-  const { metrics, dimensions, filters, groupBy, sortBy, dateRange, limit } = config;
+  const { metrics, dimensions, filters, sortBy, dateRange, limit } = config;
 
   // Determine date range
   let startDate: number;

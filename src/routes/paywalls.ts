@@ -20,7 +20,7 @@ import {
   type PaywallConfig,
   type PaywallContent,
 } from '../services/paywalls';
-import { getOfferingByIdentifier, getCurrentOffering } from '../services/offerings';
+import { getCurrentOffering } from '../services/offerings';
 import { Errors } from '../middleware/error';
 import { getSubscriberByAppUserId } from '../db/queries';
 
@@ -243,7 +243,6 @@ paywallsRouter.get('/:identifier/render', async (c) => {
   const app = c.get('app');
   const identifier = c.req.param('identifier');
   const locale = c.req.query('locale') || 'en';
-  const appUserId = c.req.query('app_user_id');
 
   const template = await getPaywallTemplate(c.env.DB, app.id, identifier);
   if (!template) {

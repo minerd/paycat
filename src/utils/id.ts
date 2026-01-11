@@ -21,7 +21,7 @@ export function generatePrefixedId(prefix: string): string {
 /**
  * Generate an API key
  */
-export function generateApiKey(prefix: 'pk_live' | 'pk_test' = 'pk_live'): string {
+export function generateApiKey(prefix: string = 'pk_live'): string {
   const randomBytes = new Uint8Array(24);
   crypto.getRandomValues(randomBytes);
   const base64 = btoa(String.fromCharCode(...randomBytes))

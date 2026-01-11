@@ -14,26 +14,17 @@ import {
 import type { EventType, Platform } from '../types';
 
 export interface WebhookPayload {
-  id: string;
-  type: EventType;
-  created_at: string;
-  data: {
-    app_user_id: string;
-    subscriber_id: string;
-    subscription?: {
-      id: string;
-      product_id: string;
-      platform: Platform;
-      status: string;
-      expires_at: string | null;
-    };
-    transaction?: {
-      id: string;
-      amount: number;
-      currency: string;
-    };
-    entitlements?: Record<string, boolean>;
-  };
+  id?: string;
+  type: string; // EventType or custom event type
+  created_at?: string;
+  app_id?: string;
+  subscriber_id?: string;
+  subscription_id?: string;
+  product_id?: string;
+  platform?: string;
+  environment?: string;
+  timestamp?: string;
+  data: Record<string, unknown>;
 }
 
 // Retry schedule (in milliseconds)

@@ -11,7 +11,7 @@ import { processWebhookRetries } from '../services/webhook-dispatcher';
  * Called by Cloudflare Cron Trigger
  */
 export async function handleScheduled(
-  event: ScheduledEvent,
+  _event: ScheduledEvent,
   env: Env
 ): Promise<void> {
   const startTime = Date.now();

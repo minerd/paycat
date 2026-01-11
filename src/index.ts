@@ -12,7 +12,7 @@ import type { Env } from './types';
 import { errorMiddleware, PayCatError } from './middleware/error';
 import { loggingMiddleware } from './middleware/logging';
 import { authMiddleware } from './middleware/auth';
-import { rateLimitMiddleware, strictRateLimitMiddleware } from './middleware/rate-limit';
+import { rateLimitMiddleware } from './middleware/rate-limit';
 
 // Import routes
 import { receiptsRouter } from './routes/receipts';

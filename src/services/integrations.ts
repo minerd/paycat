@@ -359,7 +359,7 @@ async function sendToMixpanel(config: MixpanelConfig, event: IntegrationEvent): 
     },
   };
 
-  const data = Buffer.from(JSON.stringify(mixpanelEvent)).toString('base64');
+  const data = btoa(JSON.stringify(mixpanelEvent));
   await fetch(`https://api.mixpanel.com/track?data=${data}`);
 }
 
@@ -377,7 +377,7 @@ async function sendToSegment(config: SegmentConfig, event: IntegrationEvent): Pr
     timestamp: new Date(event.timestamp).toISOString(),
   };
 
-  const auth = Buffer.from(`${config.writeKey}:`).toString('base64');
+  const auth = btoa(`${config.writeKey}:`);
 
   await fetch('https://api.segment.io/v1/track', {
     method: 'POST',

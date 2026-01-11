@@ -137,13 +137,14 @@ export async function getRevenueTimeSeries(
   startDate: number,
   endDate: number,
   _granularity: 'day' | 'week' | 'month' = 'day'
-): Promise<Array<{ date: string; revenue: number; platform?: Platform }>> {
+): Promise<Array<{ date: string; revenue: number; platform?: Platform; count: number }>> {
   const result = await db
     .prepare(
       `SELECT
          DATE(purchase_date / 1000, 'unixepoch') as date,
          platform,
-         SUM(revenue_amount) as revenue
+         SUM(revenue_amount) as revenue,
+         COUNT(*) as count
        FROM transactions
        WHERE app_id = ?
          AND purchase_date >= ?
@@ -153,13 +154,14 @@ export async function getRevenueTimeSeries(
        ORDER BY date`
     )
     .bind(appId, startDate, endDate)
-    .all<{ date: string; platform: Platform; revenue: number }>();
+    .all<{ date: string; platform: Platform; revenue: number; count: number }>();
 
   // Aggregate by granularity if needed
   const data = (result.results || []).map((row) => ({
     date: row.date,
     revenue: (row.revenue || 0) / 100,
     platform: row.platform,
+    count: row.count || 0,
   }));
 
   return data;

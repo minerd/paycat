@@ -268,7 +268,7 @@ reportsRouter.post('/:id/execute', async (c) => {
   const reportId = c.req.param('id');
   const body = await c.req.json<{
     parameters?: Record<string, any>;
-  }>().catch(() => ({}));
+  }>().catch(() => ({ parameters: undefined }));
 
   const report = await getCustomReport(c.env.DB, app.id, reportId);
   if (!report) {
