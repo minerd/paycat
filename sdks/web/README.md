@@ -1,6 +1,6 @@
-# PayCat Web SDK
+# MRRCat Web SDK
 
-TypeScript/JavaScript SDK for PayCat subscription management on web applications.
+TypeScript/JavaScript SDK for MRRCat subscription management on web applications.
 
 ## Requirements
 
@@ -10,11 +10,11 @@ TypeScript/JavaScript SDK for PayCat subscription management on web applications
 ## Installation
 
 ```bash
-npm install @paycat/web
+npm install @mrrcat/web
 # or
-yarn add @paycat/web
+yarn add @mrrcat/web
 # or
-pnpm add @paycat/web
+pnpm add @mrrcat/web
 ```
 
 ## Quick Start
@@ -22,9 +22,9 @@ pnpm add @paycat/web
 ### 1. Configure SDK
 
 ```typescript
-import PayCat from '@paycat/web';
+import MRRCat from '@mrrcat/web';
 
-PayCat.configure({
+MRRCat.configure({
   apiKey: 'pk_live_xxxxx',
   // Optional: custom user ID
   appUserID: 'user_12345',
@@ -35,10 +35,10 @@ PayCat.configure({
 
 ```typescript
 // Check specific entitlement
-const isPremium = await PayCat.shared.hasEntitlement('premium');
+const isPremium = await MRRCat.shared.hasEntitlement('premium');
 
 // Get all subscriber info
-const info = await PayCat.shared.getSubscriberInfo();
+const info = await MRRCat.shared.getSubscriberInfo();
 console.log(info.entitlements);
 ```
 
@@ -48,14 +48,14 @@ After a successful Stripe Checkout or subscription creation:
 
 ```typescript
 // After Stripe webhook confirms subscription
-const info = await PayCat.shared.syncStripeSubscription('sub_xxxxx');
+const info = await MRRCat.shared.syncStripeSubscription('sub_xxxxx');
 ```
 
 ### 4. Manage Billing
 
 ```typescript
 // Get Stripe Customer Portal URL
-const manageURL = PayCat.shared.getManagementURL();
+const manageURL = MRRCat.shared.getManagementURL();
 window.location.href = manageURL;
 ```
 
@@ -63,56 +63,56 @@ window.location.href = manageURL;
 
 ### Anonymous Users
 
-By default, PayCat creates an anonymous user ID stored in localStorage.
+By default, MRRCat creates an anonymous user ID stored in localStorage.
 
 ### Identified Users
 
 When a user logs in:
 
 ```typescript
-const info = await PayCat.shared.identify('user_12345');
+const info = await MRRCat.shared.identify('user_12345');
 ```
 
 When they log out:
 
 ```typescript
-const info = await PayCat.shared.logOut();
+const info = await MRRCat.shared.logOut();
 ```
 
 ## Event Handling
 
 ```typescript
 // Subscribe to updates
-PayCat.shared.on('subscriberInfoUpdated', (event) => {
+MRRCat.shared.on('subscriberInfoUpdated', (event) => {
   const info = event.data;
   updateUI(info);
 });
 
 // Handle errors
-PayCat.shared.on('error', (event) => {
-  console.error('PayCat error:', event.data);
+MRRCat.shared.on('error', (event) => {
+  console.error('MRRCat error:', event.data);
 });
 
 // Unsubscribe
-PayCat.shared.off('subscriberInfoUpdated', callback);
+MRRCat.shared.off('subscriberInfoUpdated', callback);
 ```
 
 ## React Integration
 
 ```tsx
-import PayCat, { SubscriberInfo } from '@paycat/web';
+import MRRCat, { SubscriberInfo } from '@mrrcat/web';
 import { useEffect, useState } from 'react';
 
-function usePayCat() {
+function useMRRCat() {
   const [info, setInfo] = useState<SubscriberInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    PayCat.shared.getSubscriberInfo()
+    MRRCat.shared.getSubscriberInfo()
       .then(setInfo)
       .finally(() => setLoading(false));
 
-    PayCat.shared.on('subscriberInfoUpdated', (event) => {
+    MRRCat.shared.on('subscriberInfoUpdated', (event) => {
       setInfo(event.data as SubscriberInfo);
     });
   }, []);
@@ -121,7 +121,7 @@ function usePayCat() {
 }
 
 function PremiumGate({ children }: { children: React.ReactNode }) {
-  const { info, loading } = usePayCat();
+  const { info, loading } = useMRRCat();
 
   if (loading) return <Loading />;
   if (!info?.entitlements.premium?.isActive) return <Paywall />;
@@ -134,17 +134,17 @@ function PremiumGate({ children }: { children: React.ReactNode }) {
 
 ```vue
 <script setup lang="ts">
-import PayCat, { SubscriberInfo } from '@paycat/web';
+import MRRCat, { SubscriberInfo } from '@mrrcat/web';
 import { ref, onMounted } from 'vue';
 
 const info = ref<SubscriberInfo | null>(null);
 const loading = ref(true);
 
 onMounted(async () => {
-  info.value = await PayCat.shared.getSubscriberInfo();
+  info.value = await MRRCat.shared.getSubscriberInfo();
   loading.value = false;
 
-  PayCat.shared.on('subscriberInfoUpdated', (event) => {
+  MRRCat.shared.on('subscriberInfoUpdated', (event) => {
     info.value = event.data as SubscriberInfo;
   });
 });
@@ -165,7 +165,7 @@ const response = await fetch('/api/create-checkout', {
   method: 'POST',
   body: JSON.stringify({
     priceId: 'price_xxxxx',
-    appUserID: PayCat.shared.currentAppUserID,
+    appUserID: MRRCat.shared.currentAppUserID,
   }),
 });
 const { sessionUrl } = await response.json();
@@ -176,19 +176,19 @@ window.location.href = sessionUrl;
 // 3. After success, sync subscription (on success page)
 const subscriptionId = new URLSearchParams(location.search).get('subscription_id');
 if (subscriptionId) {
-  await PayCat.shared.syncStripeSubscription(subscriptionId);
+  await MRRCat.shared.syncStripeSubscription(subscriptionId);
 }
 ```
 
 ## Error Handling
 
 ```typescript
-import { PayCatError } from '@paycat/web';
+import { MRRCatError } from '@mrrcat/web';
 
 try {
-  await PayCat.shared.getSubscriberInfo();
+  await MRRCat.shared.getSubscriberInfo();
 } catch (error) {
-  if (error instanceof PayCatError) {
+  if (error instanceof MRRCatError) {
     switch (error.code) {
       case 'not_configured':
         // SDK not configured
@@ -200,7 +200,7 @@ try {
         // Invalid API key
         break;
       default:
-        console.error(`PayCat error: ${error.code} - ${error.message}`);
+        console.error(`MRRCat error: ${error.code} - ${error.message}`);
     }
   }
 }
@@ -211,25 +211,25 @@ try {
 Full TypeScript support with exported types:
 
 ```typescript
-import PayCat, {
-  PayCatConfig,
+import MRRCat, {
+  MRRCatConfig,
   SubscriberInfo,
   Subscription,
   Entitlement,
   Platform,
   SubscriptionStatus,
-  PayCatError,
-} from '@paycat/web';
+  MRRCatError,
+} from '@mrrcat/web';
 ```
 
 ## API Reference
 
-### PayCat
+### MRRCat
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `configure(config)` | `PayCat` | Initialize SDK |
-| `shared` | `PayCat` | Get shared instance |
+| `configure(config)` | `MRRCat` | Initialize SDK |
+| `shared` | `MRRCat` | Get shared instance |
 | `isConfigured` | `boolean` | Check if configured |
 | `currentAppUserID` | `string` | Get current user ID |
 | `getSubscriberInfo(force?)` | `Promise<SubscriberInfo>` | Get subscriber info |

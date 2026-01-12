@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "paycat-kmp"
+rootProject.name = "mrrcat-kmp"

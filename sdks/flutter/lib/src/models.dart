@@ -42,7 +42,7 @@ class SubscriberInfo {
 
 /// Subscription details
 class Subscription {
-  final PayCatPlatform platform;
+  final MRRCatPlatform platform;
   final String productID;
   final SubscriptionStatus status;
   final DateTime purchaseDate;
@@ -80,7 +80,7 @@ class Subscription {
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
     return Subscription(
-      platform: PayCatPlatform.fromString(json['platform'] ?? ''),
+      platform: MRRCatPlatform.fromString(json['platform'] ?? ''),
       productID: json['product_id'] ?? '',
       status: SubscriptionStatus.fromString(json['status'] ?? ''),
       purchaseDate: DateTime.tryParse(json['purchase_date'] ?? '') ?? DateTime.now(),
@@ -135,22 +135,22 @@ class Entitlement {
 }
 
 /// Platform types
-enum PayCatPlatform {
+enum MRRCatPlatform {
   ios,
   android,
   stripe,
   unknown;
 
-  static PayCatPlatform fromString(String value) {
+  static MRRCatPlatform fromString(String value) {
     switch (value.toLowerCase()) {
       case 'ios':
-        return PayCatPlatform.ios;
+        return MRRCatPlatform.ios;
       case 'android':
-        return PayCatPlatform.android;
+        return MRRCatPlatform.android;
       case 'stripe':
-        return PayCatPlatform.stripe;
+        return MRRCatPlatform.stripe;
       default:
-        return PayCatPlatform.unknown;
+        return MRRCatPlatform.unknown;
     }
   }
 }
@@ -346,10 +346,10 @@ class Package {
   }
 }
 
-/// Product information from PayCat
+/// Product information from MRRCat
 class ProductInfo {
   final String storeProductId;
-  final PayCatPlatform platform;
+  final MRRCatPlatform platform;
   final String? displayName;
   final String? description;
   final ProductType productType;
@@ -373,7 +373,7 @@ class ProductInfo {
   factory ProductInfo.fromJson(Map<String, dynamic> json) {
     return ProductInfo(
       storeProductId: json['store_product_id'] ?? json['identifier'] ?? '',
-      platform: PayCatPlatform.fromString(json['platform'] ?? ''),
+      platform: MRRCatPlatform.fromString(json['platform'] ?? ''),
       displayName: json['display_name'],
       description: json['description'],
       productType: ProductType.fromString(json['product_type'] ?? ''),

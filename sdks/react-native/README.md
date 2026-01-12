@@ -1,6 +1,6 @@
-# PayCat React Native SDK
+# MRRCat React Native SDK
 
-React Native SDK for PayCat subscription management on iOS and Android.
+React Native SDK for MRRCat subscription management on iOS and Android.
 
 ## Requirements
 
@@ -10,9 +10,9 @@ React Native SDK for PayCat subscription management on iOS and Android.
 ## Installation
 
 ```bash
-npm install react-native-paycat react-native-iap @react-native-async-storage/async-storage
+npm install react-native-mrrcat react-native-iap @react-native-async-storage/async-storage
 # or
-yarn add react-native-paycat react-native-iap @react-native-async-storage/async-storage
+yarn add react-native-mrrcat react-native-iap @react-native-async-storage/async-storage
 ```
 
 ### iOS Setup
@@ -45,10 +45,10 @@ dependencies {
 ### 1. Configure SDK
 
 ```typescript
-import PayCat from 'react-native-paycat';
+import MRRCat from 'react-native-mrrcat';
 
 // In your app initialization
-await PayCat.configure({
+await MRRCat.configure({
   apiKey: 'pk_live_xxxxx',
   // Optional
   appUserID: 'user_12345',
@@ -59,19 +59,19 @@ await PayCat.configure({
 
 ```typescript
 // Check specific entitlement
-const isPremium = await PayCat.shared.hasEntitlement('premium');
+const isPremium = await MRRCat.shared.hasEntitlement('premium');
 
 // Check any active subscription
-const hasActive = await PayCat.shared.hasActiveSubscription();
+const hasActive = await MRRCat.shared.hasActiveSubscription();
 
 // Get all active entitlements
-const activeEntitlements = await PayCat.shared.getActiveEntitlements();
+const activeEntitlements = await MRRCat.shared.getActiveEntitlements();
 ```
 
 ### 3. Display Products
 
 ```typescript
-const products = await PayCat.shared.getProducts([
+const products = await MRRCat.shared.getProducts([
   'com.app.premium_monthly',
   'com.app.premium_yearly',
 ]);
@@ -84,13 +84,13 @@ products.forEach(product => {
 ### 4. Make a Purchase
 
 ```typescript
-import { PayCatError } from 'react-native-paycat';
+import { MRRCatError } from 'react-native-mrrcat';
 
 try {
-  const info = await PayCat.shared.purchase('com.app.premium_monthly');
+  const info = await MRRCat.shared.purchase('com.app.premium_monthly');
   // Purchase successful!
 } catch (error) {
-  if (error instanceof PayCatError) {
+  if (error instanceof MRRCatError) {
     if (error.code === 'purchase_cancelled') {
       // User cancelled
     } else {
@@ -103,7 +103,7 @@ try {
 ### 5. Restore Purchases
 
 ```typescript
-const info = await PayCat.shared.restorePurchases();
+const info = await MRRCat.shared.restorePurchases();
 ```
 
 ## React Hooks
@@ -113,7 +113,7 @@ The SDK provides convenient React hooks for common operations.
 ### useSubscriberInfo
 
 ```tsx
-import { useSubscriberInfo } from 'react-native-paycat';
+import { useSubscriberInfo } from 'react-native-mrrcat';
 
 function MyComponent() {
   const { subscriberInfo, loading, error, refresh } = useSubscriberInfo();
@@ -133,7 +133,7 @@ function MyComponent() {
 ### useEntitlement
 
 ```tsx
-import { useEntitlement } from 'react-native-paycat';
+import { useEntitlement } from 'react-native-mrrcat';
 
 function PremiumFeature() {
   const { isActive, loading, error } = useEntitlement('premium');
@@ -148,7 +148,7 @@ function PremiumFeature() {
 ### useHasActiveSubscription
 
 ```tsx
-import { useHasActiveSubscription } from 'react-native-paycat';
+import { useHasActiveSubscription } from 'react-native-mrrcat';
 
 function SubscriptionGate({ children }) {
   const { hasActive, loading } = useHasActiveSubscription();
@@ -163,7 +163,7 @@ function SubscriptionGate({ children }) {
 ### useProducts
 
 ```tsx
-import { useProducts } from 'react-native-paycat';
+import { useProducts } from 'react-native-mrrcat';
 
 function ProductList() {
   const { products, loading, error, refresh } = useProducts([
@@ -187,7 +187,7 @@ function ProductList() {
 ### usePurchase
 
 ```tsx
-import { usePurchase } from 'react-native-paycat';
+import { usePurchase } from 'react-native-mrrcat';
 
 function BuyButton({ productId }) {
   const { purchase, restore, loading, error } = usePurchase();
@@ -214,40 +214,40 @@ function BuyButton({ productId }) {
 
 ### Anonymous Users
 
-By default, PayCat creates an anonymous user ID stored in AsyncStorage.
+By default, MRRCat creates an anonymous user ID stored in AsyncStorage.
 
 ### Identified Users
 
 When a user logs in:
 
 ```typescript
-const info = await PayCat.shared.identify('user_12345');
+const info = await MRRCat.shared.identify('user_12345');
 ```
 
 When they log out:
 
 ```typescript
-const info = await PayCat.shared.logOut();
+const info = await MRRCat.shared.logOut();
 ```
 
 ## Event Handling
 
 ```typescript
 // Subscribe to updates
-const unsubscribe = PayCat.shared.on('subscriberInfoUpdated', (event) => {
+const unsubscribe = MRRCat.shared.on('subscriberInfoUpdated', (event) => {
   console.log('Subscriber info updated:', event.data);
 });
 
 // Purchase events
-PayCat.shared.on('purchaseCompleted', (event) => {
+MRRCat.shared.on('purchaseCompleted', (event) => {
   console.log('Purchase completed!');
 });
 
-PayCat.shared.on('purchaseFailed', (event) => {
+MRRCat.shared.on('purchaseFailed', (event) => {
   console.error('Purchase failed:', event.data);
 });
 
-PayCat.shared.on('restoreCompleted', () => {
+MRRCat.shared.on('restoreCompleted', () => {
   console.log('Restore completed!');
 });
 
@@ -261,18 +261,18 @@ For web purchases that need to sync to mobile:
 
 ```typescript
 // Sync a Stripe subscription
-const info = await PayCat.shared.syncStripeSubscription('sub_xxxxx');
+const info = await MRRCat.shared.syncStripeSubscription('sub_xxxxx');
 ```
 
 ## Error Handling
 
 ```typescript
-import { PayCatError } from 'react-native-paycat';
+import { MRRCatError } from 'react-native-mrrcat';
 
 try {
-  await PayCat.shared.purchase(productId);
+  await MRRCat.shared.purchase(productId);
 } catch (error) {
-  if (error instanceof PayCatError) {
+  if (error instanceof MRRCatError) {
     switch (error.code) {
       case 'not_configured':
         // SDK not configured
@@ -293,7 +293,7 @@ try {
         // Sync failed
         break;
       default:
-        console.error(`PayCat error: ${error.code} - ${error.message}`);
+        console.error(`MRRCat error: ${error.code} - ${error.message}`);
     }
   }
 }
@@ -304,28 +304,28 @@ try {
 Full TypeScript support with exported types:
 
 ```typescript
-import PayCat, {
-  PayCatConfig,
+import MRRCat, {
+  MRRCatConfig,
   SubscriberInfo,
   Subscription,
   Entitlement,
   ProductDetails,
   Platform,
   SubscriptionStatus,
-  PayCatError,
-  PayCatEventType,
-  PayCatEvent,
-} from 'react-native-paycat';
+  MRRCatError,
+  MRRCatEventType,
+  MRRCatEvent,
+} from 'react-native-mrrcat';
 ```
 
 ## API Reference
 
-### PayCat
+### MRRCat
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `configure(config)` | `Promise<PayCat>` | Initialize SDK |
-| `shared` | `PayCat` | Get instance |
+| `configure(config)` | `Promise<MRRCat>` | Initialize SDK |
+| `shared` | `MRRCat` | Get instance |
 | `isConfigured` | `boolean` | Check if configured |
 | `currentAppUserID` | `string` | Current user ID |
 | `currentSubscriberInfo` | `SubscriberInfo \| null` | Cached info |

@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "PayCat",
+    name: "MRRCat",
     platforms: [
         .iOS(.v14),
         .macOS(.v11),
@@ -11,19 +11,19 @@ let package = Package(
     ],
     products: [
         .library(
-            name: "PayCat",
-            targets: ["PayCat"]
+            name: "MRRCat",
+            targets: ["MRRCat"]
         ),
     ],
     targets: [
         .target(
-            name: "PayCat",
+            name: "MRRCat",
             dependencies: [],
-            path: "Sources/PayCat"
+            path: "Sources/MRRCat"
         ),
         .testTarget(
-            name: "PayCatTests",
-            dependencies: ["PayCat"]
+            name: "MRRCatTests",
+            dependencies: ["MRRCat"]
         ),
     ]
 )

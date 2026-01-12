@@ -5,7 +5,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "dev.paycat"
+group = "dev.mrrcat"
 version = "1.0.0"
 
 kotlin {
@@ -26,7 +26,7 @@ kotlin {
         iosSimulatorArm64()
     ).forEach {
         it.binaries.framework {
-            baseName = "PayCatKMP"
+            baseName = "MRRCatKMP"
             isStatic = true
         }
     }
@@ -86,7 +86,7 @@ kotlin {
 }
 
 android {
-    namespace = "dev.paycat.kmp"
+    namespace = "dev.mrrcat.kmp"
     compileSdk = 34
 
     defaultConfig {
@@ -102,14 +102,14 @@ android {
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            groupId = "dev.paycat"
-            artifactId = "paycat-kmp"
+            groupId = "dev.mrrcat"
+            artifactId = "mrrcat-kmp"
             version = project.version.toString()
 
             pom {
-                name.set("PayCat KMP SDK")
-                description.set("Kotlin Multiplatform SDK for PayCat - Unified Payment & Subscription Management")
-                url.set("https://github.com/anthropic/paycat-kmp")
+                name.set("MRRCat KMP SDK")
+                description.set("Kotlin Multiplatform SDK for MRRCat - Unified Payment & Subscription Management")
+                url.set("https://github.com/anthropic/mrrcat-kmp")
                 licenses {
                     license {
                         name.set("MIT License")

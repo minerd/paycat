@@ -1,6 +1,6 @@
-# PayCat Flutter SDK
+# MRRCat Flutter SDK
 
-Flutter SDK for PayCat subscription management on iOS and Android.
+Flutter SDK for MRRCat subscription management on iOS and Android.
 
 ## Requirements
 
@@ -14,7 +14,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  paycat_flutter: ^1.0.0
+  mrrcat_flutter: ^1.0.0
 ```
 
 Then run:
@@ -51,12 +51,12 @@ dependencies {
 ### 1. Configure SDK
 
 ```dart
-import 'package:paycat_flutter/paycat_flutter.dart';
+import 'package:mrrcat_flutter/mrrcat_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await PayCat.configure(apiKey: 'pk_live_xxxxx');
+  await MRRCat.configure(apiKey: 'pk_live_xxxxx');
 
   runApp(MyApp());
 }
@@ -66,17 +66,17 @@ void main() async {
 
 ```dart
 // Check specific entitlement
-final isPremium = await PayCat.instance.hasEntitlement('premium');
+final isPremium = await MRRCat.instance.hasEntitlement('premium');
 
 // Get subscriber info
-final info = await PayCat.instance.getSubscriberInfo();
+final info = await MRRCat.instance.getSubscriberInfo();
 print(info.activeEntitlements);
 ```
 
 ### 3. Display Products
 
 ```dart
-final products = await PayCat.instance.getProducts({
+final products = await MRRCat.instance.getProducts({
   'com.app.premium_monthly',
   'com.app.premium_yearly',
 });
@@ -90,13 +90,13 @@ for (final product in products) {
 
 ```dart
 try {
-  final info = await PayCat.instance.purchase(product);
+  final info = await MRRCat.instance.purchase(product);
   if (info.hasActiveEntitlement) {
     // Purchase successful!
   }
-} on PayCatPurchaseCancelledException {
+} on MRRCatPurchaseCancelledException {
   // User cancelled
-} on PayCatException catch (e) {
+} on MRRCatException catch (e) {
   print('Purchase failed: ${e.message}');
 }
 ```
@@ -104,27 +104,27 @@ try {
 ### 5. Restore Purchases
 
 ```dart
-final info = await PayCat.instance.restorePurchases();
+final info = await MRRCat.instance.restorePurchases();
 ```
 
 ## User Management
 
 ### Anonymous Users
 
-By default, PayCat creates an anonymous user ID stored in SharedPreferences.
+By default, MRRCat creates an anonymous user ID stored in SharedPreferences.
 
 ### Identified Users
 
 When a user logs in:
 
 ```dart
-final info = await PayCat.instance.identify('user_12345');
+final info = await MRRCat.instance.identify('user_12345');
 ```
 
 When they log out:
 
 ```dart
-final info = await PayCat.instance.logOut();
+final info = await MRRCat.instance.logOut();
 ```
 
 ## Observing Updates
@@ -132,7 +132,7 @@ final info = await PayCat.instance.logOut();
 Listen to subscriber info stream:
 
 ```dart
-PayCat.instance.subscriberInfoStream.listen((info) {
+MRRCat.instance.subscriberInfoStream.listen((info) {
   setState(() {
     _subscriberInfo = info;
   });
@@ -156,8 +156,8 @@ class PremiumGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<SubscriberInfo>(
-      stream: PayCat.instance.subscriberInfoStream,
-      initialData: PayCat.instance.subscriberInfo,
+      stream: MRRCat.instance.subscriberInfoStream,
+      initialData: MRRCat.instance.subscriberInfo,
       builder: (context, snapshot) {
         final info = snapshot.data;
         if (info?.hasActiveEntitlement ?? false) {
@@ -200,13 +200,13 @@ class _EntitlementConsumerState extends State<EntitlementConsumer> {
   void initState() {
     super.initState();
     _checkEntitlement();
-    _subscription = PayCat.instance.subscriberInfoStream.listen((_) {
+    _subscription = MRRCat.instance.subscriberInfoStream.listen((_) {
       _checkEntitlement();
     });
   }
 
   Future<void> _checkEntitlement() async {
-    final isActive = await PayCat.instance.hasEntitlement(widget.entitlementId);
+    final isActive = await MRRCat.instance.hasEntitlement(widget.entitlementId);
     if (mounted) {
       setState(() => _isActive = isActive);
     }
@@ -227,20 +227,20 @@ class _EntitlementConsumerState extends State<EntitlementConsumer> {
 
 ```dart
 try {
-  final info = await PayCat.instance.purchase(product);
-} on PayCatNotConfiguredException {
+  final info = await MRRCat.instance.purchase(product);
+} on MRRCatNotConfiguredException {
   // SDK not configured
-} on PayCatPurchaseCancelledException {
+} on MRRCatPurchaseCancelledException {
   // User cancelled purchase
-} on PayCatVerificationFailedException catch (e) {
+} on MRRCatVerificationFailedException catch (e) {
   // Verification failed: ${e.message}
-} on PayCatApiException catch (e) {
+} on MRRCatApiException catch (e) {
   // API error: ${e.code} - ${e.message}
-} on PayCatHttpException catch (e) {
+} on MRRCatHttpException catch (e) {
   // HTTP error: ${e.statusCode}
-} on PayCatNetworkException {
+} on MRRCatNetworkException {
   // Network error
-} on PayCatException catch (e) {
+} on MRRCatException catch (e) {
   // Other error: ${e.message}
 }
 ```
@@ -260,17 +260,17 @@ class SubscriberInfoProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    _info = await PayCat.instance.getSubscriberInfo();
+    _info = await MRRCat.instance.getSubscriberInfo();
     notifyListeners();
 
-    PayCat.instance.subscriberInfoStream.listen((info) {
+    MRRCat.instance.subscriberInfoStream.listen((info) {
       _info = info;
       notifyListeners();
     });
   }
 
   Future<void> refresh() async {
-    _info = await PayCat.instance.getSubscriberInfo(forceRefresh: true);
+    _info = await MRRCat.instance.getSubscriberInfo(forceRefresh: true);
     notifyListeners();
   }
 }
@@ -278,12 +278,12 @@ class SubscriberInfoProvider extends ChangeNotifier {
 
 ## API Reference
 
-### PayCat
+### MRRCat
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `configure({apiKey, appUserID?, baseURL?})` | `Future<PayCat>` | Initialize SDK |
-| `instance` | `PayCat` | Get instance |
+| `configure({apiKey, appUserID?, baseURL?})` | `Future<MRRCat>` | Initialize SDK |
+| `instance` | `MRRCat` | Get instance |
 | `isConfigured` | `bool` | Check if configured |
 | `appUserID` | `String` | Current user ID |
 | `subscriberInfo` | `SubscriberInfo?` | Cached info |

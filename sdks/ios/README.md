@@ -1,6 +1,6 @@
-# PayCat iOS SDK
+# MRRCat iOS SDK
 
-Swift SDK for PayCat subscription management on iOS, macOS, tvOS, and watchOS.
+Swift SDK for MRRCat subscription management on iOS, macOS, tvOS, and watchOS.
 
 ## Requirements
 
@@ -12,11 +12,11 @@ Swift SDK for PayCat subscription management on iOS, macOS, tvOS, and watchOS.
 
 ### Swift Package Manager
 
-Add PayCat to your `Package.swift`:
+Add MRRCat to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/minerd/paycat.git", from: "1.0.0")
+    .package(url: "https://github.com/minerd/mrrcat.git", from: "1.0.0")
 ]
 ```
 
@@ -26,19 +26,19 @@ Or in Xcode: File > Add Packages > Enter repository URL.
 
 ### 1. Configure SDK
 
-Configure PayCat as early as possible, typically in your App's init:
+Configure MRRCat as early as possible, typically in your App's init:
 
 ```swift
-import PayCat
+import MRRCat
 
 @main
 struct MyApp: App {
     init() {
         Task {
             do {
-                try await PayCat.configure(apiKey: "pk_live_xxxxx")
+                try await MRRCat.configure(apiKey: "pk_live_xxxxx")
             } catch {
-                print("PayCat configuration failed: \(error)")
+                print("MRRCat configuration failed: \(error)")
             }
         }
     }
@@ -49,10 +49,10 @@ struct MyApp: App {
 
 ```swift
 // Check specific entitlement
-let isPremium = try await PayCat.shared.hasEntitlement("premium")
+let isPremium = try await MRRCat.shared.hasEntitlement("premium")
 
 // Get all active entitlements
-let info = try await PayCat.shared.getSubscriberInfo()
+let info = try await MRRCat.shared.getSubscriberInfo()
 let activeEntitlements = info.activeEntitlements
 ```
 
@@ -60,7 +60,7 @@ let activeEntitlements = info.activeEntitlements
 
 ```swift
 let productIDs: Set<String> = ["com.app.premium_monthly", "com.app.premium_yearly"]
-let products = try await PayCat.shared.products(productIDs: productIDs)
+let products = try await MRRCat.shared.products(productIDs: productIDs)
 
 for product in products {
     print("\(product.displayName): \(product.displayPrice)")
@@ -71,11 +71,11 @@ for product in products {
 
 ```swift
 do {
-    let info = try await PayCat.shared.purchase(product)
+    let info = try await MRRCat.shared.purchase(product)
     if info.hasActiveEntitlement {
         // Purchase successful!
     }
-} catch PayCatError.purchaseCancelled {
+} catch MRRCatError.purchaseCancelled {
     // User cancelled
 } catch {
     print("Purchase failed: \(error)")
@@ -85,27 +85,27 @@ do {
 ### 5. Restore Purchases
 
 ```swift
-let info = try await PayCat.shared.restorePurchases()
+let info = try await MRRCat.shared.restorePurchases()
 ```
 
 ## User Management
 
 ### Anonymous Users
 
-By default, PayCat creates an anonymous user ID. This is stored securely and persists across app launches.
+By default, MRRCat creates an anonymous user ID. This is stored securely and persists across app launches.
 
 ### Identified Users
 
 When a user logs in to your app:
 
 ```swift
-let info = try await PayCat.shared.identify(appUserID: "user_12345")
+let info = try await MRRCat.shared.identify(appUserID: "user_12345")
 ```
 
 When they log out:
 
 ```swift
-let info = try await PayCat.shared.logOut()
+let info = try await MRRCat.shared.logOut()
 ```
 
 ## Observing Updates
@@ -113,7 +113,7 @@ let info = try await PayCat.shared.logOut()
 Subscribe to real-time subscriber info updates:
 
 ```swift
-for await info in PayCat.shared.subscriberInfoStream {
+for await info in MRRCat.shared.subscriberInfoStream {
     updateUI(with: info)
 }
 ```
@@ -121,7 +121,7 @@ for await info in PayCat.shared.subscriberInfoStream {
 Or use the publisher:
 
 ```swift
-PayCat.shared.subscriberInfoPublisher
+MRRCat.shared.subscriberInfoPublisher
     .sink { info in
         updateUI(with: info)
     }
@@ -144,7 +144,7 @@ struct ContentView: View {
         }
         .task {
             do {
-                isPremium = try await PayCat.shared.hasEntitlement("premium")
+                isPremium = try await MRRCat.shared.hasEntitlement("premium")
             } catch {
                 // Handle error
             }
@@ -157,16 +157,16 @@ struct ContentView: View {
 
 ```swift
 do {
-    let info = try await PayCat.shared.purchase(product)
-} catch PayCatError.notConfigured {
+    let info = try await MRRCat.shared.purchase(product)
+} catch MRRCatError.notConfigured {
     // SDK not configured
-} catch PayCatError.purchaseCancelled {
+} catch MRRCatError.purchaseCancelled {
     // User cancelled purchase
-} catch PayCatError.verificationFailed {
+} catch MRRCatError.verificationFailed {
     // StoreKit verification failed
-} catch PayCatError.productNotFound(let productID) {
+} catch MRRCatError.productNotFound(let productID) {
     // Product not available
-} catch PayCatError.apiError(let code, let message) {
+} catch MRRCatError.apiError(let code, let message) {
     // API error occurred
 } catch {
     // Unknown error
@@ -179,7 +179,7 @@ The SDK automatically detects sandbox mode. Test purchases work the same way as 
 
 ## API Reference
 
-### PayCat
+### MRRCat
 
 | Method | Description |
 |--------|-------------|

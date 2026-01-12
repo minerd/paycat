@@ -1,6 +1,6 @@
-# PayCat Android SDK
+# MRRCat Android SDK
 
-Kotlin SDK for PayCat subscription management on Android.
+Kotlin SDK for MRRCat subscription management on Android.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ Add to your app's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.paycat:sdk:1.0.0")
+    implementation("com.mrrcat:sdk:1.0.0")
 }
 ```
 
@@ -23,15 +23,15 @@ dependencies {
 
 ### 1. Configure SDK
 
-Configure PayCat in your Application class:
+Configure MRRCat in your Application class:
 
 ```kotlin
-import com.paycat.sdk.PayCat
+import com.mrrcat.sdk.MRRCat
 
 class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        PayCat.configure(this, "pk_live_xxxxx")
+        MRRCat.configure(this, "pk_live_xxxxx")
     }
 }
 ```
@@ -40,7 +40,7 @@ class MyApplication : Application() {
 
 ```kotlin
 lifecycleScope.launch {
-    val isPremium = PayCat.shared.hasEntitlement("premium")
+    val isPremium = MRRCat.shared.hasEntitlement("premium")
     if (isPremium) {
         // Show premium content
     }
@@ -51,7 +51,7 @@ lifecycleScope.launch {
 
 ```kotlin
 lifecycleScope.launch {
-    val products = PayCat.shared.getProducts(listOf(
+    val products = MRRCat.shared.getProducts(listOf(
         "com.app.premium_monthly",
         "com.app.premium_yearly"
     ))
@@ -66,41 +66,41 @@ lifecycleScope.launch {
 
 ```kotlin
 try {
-    val info = PayCat.shared.purchase(activity, product)
+    val info = MRRCat.shared.purchase(activity, product)
     if (info.hasActiveEntitlement) {
         // Purchase successful!
     }
-} catch (e: PayCatException.PurchaseCancelled) {
+} catch (e: MRRCatException.PurchaseCancelled) {
     // User cancelled
-} catch (e: PayCatException) {
-    Log.e("PayCat", "Purchase failed: ${e.message}")
+} catch (e: MRRCatException) {
+    Log.e("MRRCat", "Purchase failed: ${e.message}")
 }
 ```
 
 ### 5. Restore Purchases
 
 ```kotlin
-val info = PayCat.shared.restorePurchases()
+val info = MRRCat.shared.restorePurchases()
 ```
 
 ## User Management
 
 ### Anonymous Users
 
-By default, PayCat creates an anonymous user ID stored in SharedPreferences.
+By default, MRRCat creates an anonymous user ID stored in SharedPreferences.
 
 ### Identified Users
 
 When a user logs in:
 
 ```kotlin
-val info = PayCat.shared.identify("user_12345")
+val info = MRRCat.shared.identify("user_12345")
 ```
 
 When they log out:
 
 ```kotlin
-val info = PayCat.shared.logOut()
+val info = MRRCat.shared.logOut()
 ```
 
 ## Observing Updates
@@ -109,7 +109,7 @@ Use StateFlow for reactive updates:
 
 ```kotlin
 lifecycleScope.launch {
-    PayCat.shared.subscriberInfo.collect { info ->
+    MRRCat.shared.subscriberInfo.collect { info ->
         info?.let { updateUI(it) }
     }
 }
@@ -118,7 +118,7 @@ lifecycleScope.launch {
 Or observe connection state:
 
 ```kotlin
-PayCat.shared.connectionState.collect { state ->
+MRRCat.shared.connectionState.collect { state ->
     when (state) {
         ConnectionState.Connected -> // Ready to purchase
         ConnectionState.Disconnected -> // Not connected
@@ -134,7 +134,7 @@ PayCat.shared.connectionState.collect { state ->
 fun PremiumGate(
     content: @Composable () -> Unit
 ) {
-    val subscriberInfo by PayCat.shared.subscriberInfo.collectAsState()
+    val subscriberInfo by MRRCat.shared.subscriberInfo.collectAsState()
     val isPremium = subscriberInfo?.entitlements?.get("premium")?.isActive == true
 
     if (isPremium) {
@@ -149,18 +149,18 @@ fun PremiumGate(
 
 ```kotlin
 try {
-    val info = PayCat.shared.purchase(activity, product)
-} catch (e: PayCatException.NotConfigured) {
+    val info = MRRCat.shared.purchase(activity, product)
+} catch (e: MRRCatException.NotConfigured) {
     // SDK not configured
-} catch (e: PayCatException.PurchaseCancelled) {
+} catch (e: MRRCatException.PurchaseCancelled) {
     // User cancelled purchase
-} catch (e: PayCatException.BillingUnavailable) {
+} catch (e: MRRCatException.BillingUnavailable) {
     // Play Store not available
-} catch (e: PayCatException.ProductNotFound) {
+} catch (e: MRRCatException.ProductNotFound) {
     // Product not found
-} catch (e: PayCatException.ApiError) {
+} catch (e: MRRCatException.ApiError) {
     // API error: ${e.code} - ${e.message}
-} catch (e: PayCatException) {
+} catch (e: MRRCatException) {
     // Other error
 }
 ```
@@ -170,13 +170,13 @@ try {
 If you use ProGuard, add these rules:
 
 ```proguard
--keep class com.paycat.sdk.** { *; }
--keepclassmembers class com.paycat.sdk.** { *; }
+-keep class com.mrrcat.sdk.** { *; }
+-keepclassmembers class com.mrrcat.sdk.** { *; }
 ```
 
 ## API Reference
 
-### PayCat
+### MRRCat
 
 | Method | Description |
 |--------|-------------|

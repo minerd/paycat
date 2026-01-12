@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
-        id="cordova-plugin-paycat"
+        id="cordova-plugin-mrrcat"
         version="1.0.0">
 
-    <name>PayCat</name>
-    <description>PayCat SDK for Cordova - Unified Payment & Subscription Management</description>
+    <name>MRRCat</name>
+    <description>MRRCat SDK for Cordova - Unified Payment & Subscription Management</description>
     <license>MIT</license>
-    <keywords>cordova,paycat,subscriptions,in-app-purchases,payments</keywords>
-    <repo>https://github.com/anthropic/paycat-cordova.git</repo>
-    <issue>https://github.com/anthropic/paycat-cordova/issues</issue>
+    <keywords>cordova,mrrcat,subscriptions,in-app-purchases,payments</keywords>
+    <repo>https://github.com/anthropic/mrrcat-cordova.git</repo>
+    <issue>https://github.com/anthropic/mrrcat-cordova/issues</issue>
 
     <engines>
         <engine name="cordova" version=">=10.0.0"/>
@@ -17,20 +17,20 @@
         <engine name="cordova-android" version=">=10.0.0"/>
     </engines>
 
-    <js-module src="www/PayCat.js" name="PayCat">
-        <clobbers target="PayCat"/>
+    <js-module src="www/MRRCat.js" name="MRRCat">
+        <clobbers target="MRRCat"/>
     </js-module>
 
     <!-- iOS Platform -->
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
-            <feature name="PayCat">
-                <param name="ios-package" value="PayCatPlugin"/>
+            <feature name="MRRCat">
+                <param name="ios-package" value="MRRCatPlugin"/>
             </feature>
         </config-file>
 
-        <header-file src="src/ios/PayCatPlugin.h"/>
-        <source-file src="src/ios/PayCatPlugin.m"/>
+        <header-file src="src/ios/MRRCatPlugin.h"/>
+        <source-file src="src/ios/MRRCatPlugin.m"/>
 
         <!-- StoreKit framework for in-app purchases -->
         <framework src="StoreKit.framework"/>
@@ -42,7 +42,7 @@
                 <false/>
                 <key>NSExceptionDomains</key>
                 <dict>
-                    <key>paycat.dev</key>
+                    <key>mrrcat.dev</key>
                     <dict>
                         <key>NSIncludesSubdomains</key>
                         <true/>
@@ -57,8 +57,8 @@
     <!-- Android Platform -->
     <platform name="android">
         <config-file target="res/xml/config.xml" parent="/*">
-            <feature name="PayCat">
-                <param name="android-package" value="dev.paycat.cordova.PayCatPlugin"/>
+            <feature name="MRRCat">
+                <param name="android-package" value="dev.mrrcat.cordova.MRRCatPlugin"/>
             </feature>
         </config-file>
 
@@ -67,7 +67,7 @@
             <uses-permission android:name="com.android.vending.BILLING"/>
         </config-file>
 
-        <source-file src="src/android/PayCatPlugin.java" target-dir="src/dev/paycat/cordova"/>
+        <source-file src="src/android/MRRCatPlugin.java" target-dir="src/dev/mrrcat/cordova"/>
 
         <!-- Google Play Billing Library -->
         <framework src="com.android.billingclient:billing:6.0.1" custom="false"/>

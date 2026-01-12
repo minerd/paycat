@@ -1,6 +1,6 @@
 {
-    "name": "PayCat",
-    "rootNamespace": "PayCat",
+    "name": "MRRCat",
+    "rootNamespace": "MRRCat",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

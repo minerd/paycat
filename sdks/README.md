@@ -1,92 +1,92 @@
-# PayCat SDKs
+# MRRCat SDKs
 
-PayCat provides official SDKs for all major platforms to handle in-app purchases and subscription management.
+MRRCat provides official SDKs for all major platforms to handle in-app purchases and subscription management.
 
 ## Available SDKs
 
 | Platform | Package | Status |
 |----------|---------|--------|
-| iOS/macOS | [paycat-ios](./ios) | Ready |
-| Android | [paycat-android](./android) | Ready |
-| Web/JavaScript | [paycat-web](./web) | Ready |
-| Flutter | [paycat_flutter](./flutter) | Ready |
-| React Native | [react-native-paycat](./react-native) | Ready |
+| iOS/macOS | [mrrcat-ios](./ios) | Ready |
+| Android | [mrrcat-android](./android) | Ready |
+| Web/JavaScript | [mrrcat-web](./web) | Ready |
+| Flutter | [mrrcat_flutter](./flutter) | Ready |
+| React Native | [react-native-mrrcat](./react-native) | Ready |
 
 ## Quick Start
 
 ### iOS (Swift)
 
 ```swift
-import PayCat
+import MRRCat
 
 // Configure
-try await PayCat.configure(apiKey: "pk_live_xxxxx")
+try await MRRCat.configure(apiKey: "pk_live_xxxxx")
 
 // Check entitlement
-let isPremium = try await PayCat.shared.hasEntitlement("premium")
+let isPremium = try await MRRCat.shared.hasEntitlement("premium")
 
 // Make a purchase
-let products = try await PayCat.shared.products(productIDs: ["com.app.premium_monthly"])
+let products = try await MRRCat.shared.products(productIDs: ["com.app.premium_monthly"])
 if let product = products.first {
-    let info = try await PayCat.shared.purchase(product)
+    let info = try await MRRCat.shared.purchase(product)
 }
 ```
 
 ### Android (Kotlin)
 
 ```kotlin
-import com.paycat.sdk.PayCat
+import com.mrrcat.sdk.MRRCat
 
 // Configure
-PayCat.configure(context, "pk_live_xxxxx")
+MRRCat.configure(context, "pk_live_xxxxx")
 
 // Check entitlement
 lifecycleScope.launch {
-    val isPremium = PayCat.shared.hasEntitlement("premium")
+    val isPremium = MRRCat.shared.hasEntitlement("premium")
 }
 
 // Make a purchase
-PayCat.shared.purchase(activity, product)
+MRRCat.shared.purchase(activity, product)
 ```
 
 ### Web (JavaScript/TypeScript)
 
 ```typescript
-import PayCat from '@paycat/web';
+import MRRCat from '@mrrcat/web';
 
 // Configure
-PayCat.configure({ apiKey: 'pk_live_xxxxx' });
+MRRCat.configure({ apiKey: 'pk_live_xxxxx' });
 
 // Check entitlement
-const isPremium = await PayCat.shared.hasEntitlement('premium');
+const isPremium = await MRRCat.shared.hasEntitlement('premium');
 
 // Sync Stripe subscription
-await PayCat.shared.syncStripeSubscription('sub_xxxxx');
+await MRRCat.shared.syncStripeSubscription('sub_xxxxx');
 ```
 
 ### Flutter
 
 ```dart
-import 'package:paycat_flutter/paycat_flutter.dart';
+import 'package:mrrcat_flutter/mrrcat_flutter.dart';
 
 // Configure
-await PayCat.configure(apiKey: 'pk_live_xxxxx');
+await MRRCat.configure(apiKey: 'pk_live_xxxxx');
 
 // Check entitlement
-final isPremium = await PayCat.instance.hasEntitlement('premium');
+final isPremium = await MRRCat.instance.hasEntitlement('premium');
 
 // Make a purchase
-final products = await PayCat.instance.getProducts({'com.app.premium_monthly'});
-final info = await PayCat.instance.purchase(products.first);
+final products = await MRRCat.instance.getProducts({'com.app.premium_monthly'});
+final info = await MRRCat.instance.purchase(products.first);
 ```
 
 ### React Native
 
 ```typescript
-import PayCat, { useEntitlement } from 'react-native-paycat';
+import MRRCat, { useEntitlement } from 'react-native-mrrcat';
 
 // Configure
-await PayCat.configure({ apiKey: 'pk_live_xxxxx' });
+await MRRCat.configure({ apiKey: 'pk_live_xxxxx' });
 
 // Use hook
 function PremiumFeature() {
@@ -158,7 +158,7 @@ interface Entitlement {
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/minerd/paycat.git", from: "1.0.0")
+    .package(url: "https://github.com/minerd/mrrcat.git", from: "1.0.0")
 ]
 ```
 
@@ -167,14 +167,14 @@ dependencies: [
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.paycat:sdk:1.0.0")
+    implementation("com.mrrcat:sdk:1.0.0")
 }
 ```
 
 ### Web (npm)
 
 ```bash
-npm install @paycat/web
+npm install @mrrcat/web
 ```
 
 ### Flutter
@@ -182,13 +182,13 @@ npm install @paycat/web
 ```yaml
 # pubspec.yaml
 dependencies:
-  paycat_flutter: ^1.0.0
+  mrrcat_flutter: ^1.0.0
 ```
 
 ### React Native
 
 ```bash
-npm install react-native-paycat react-native-iap @react-native-async-storage/async-storage
+npm install react-native-mrrcat react-native-iap @react-native-async-storage/async-storage
 ```
 
 ## Server-Side Integration
@@ -197,5 +197,5 @@ For server-side verification and webhooks, see the [API Documentation](../docs/a
 
 ## Support
 
-- GitHub Issues: https://github.com/minerd/paycat/issues
-- Documentation: https://paycat.dev/docs
+- GitHub Issues: https://github.com/minerd/mrrcat/issues
+- Documentation: https://mrrcat.dev/docs
