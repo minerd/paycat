@@ -38,12 +38,16 @@ class MRRCat private constructor(
 
         /**
          * Configure MRRCat with your API key
+         * @param context Application context
+         * @param apiKey Your MRRCat API key
+         * @param baseURL Your MRRCat API URL (e.g., "https://mrrcat.yourdomain.com")
+         * @param appUserID Optional user ID. If null, an anonymous ID will be generated
          */
         fun configure(
             context: Context,
             apiKey: String,
-            appUserID: String? = null,
-            baseURL: String = "https://mrrcat.ongoru.workers.dev"
+            baseURL: String,
+            appUserID: String? = null
         ): MRRCat {
             return synchronized(this) {
                 instance?.let { return it }

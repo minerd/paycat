@@ -54,10 +54,14 @@ class MRRCat {
         _baseURL = baseURL;
 
   /// Configure MRRCat SDK
+  ///
+  /// [apiKey] - Your MRRCat API key
+  /// [baseURL] - Your MRRCat API URL (e.g., "https://mrrcat.yourdomain.com")
+  /// [appUserID] - Optional user ID. If null, an anonymous ID will be generated
   static Future<MRRCat> configure({
     required String apiKey,
+    required String baseURL,
     String? appUserID,
-    String baseURL = 'https://mrrcat.ongoru.workers.dev',
   }) async {
     if (_instance != null) {
       return _instance!;

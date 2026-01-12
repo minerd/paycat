@@ -8,9 +8,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
 export interface MRRCatConfig {
+  /** Your MRRCat API key */
   apiKey: string;
+  /** Your MRRCat API URL (e.g., "https://mrrcat.yourdomain.com") */
+  baseURL: string;
+  /** Optional user ID. If not provided, an anonymous ID will be generated */
   appUserID?: string;
-  baseURL?: string;
+  /** Use native IAP (react-native-iap) for purchases. Default: true */
   useNativeIAP?: boolean;
 }
 
@@ -189,7 +193,7 @@ class MRRCatSDK {
 
   private apiKey: string = '';
   private appUserID: string = '';
-  private baseURL: string = 'https://mrrcat.ongoru.workers.dev';
+  private baseURL: string = '';
   private useNativeIAP: boolean = true;
 
   private subscriberInfoCache: SubscriberInfo | null = null;
@@ -212,7 +216,7 @@ class MRRCatSDK {
 
     const instance = MRRCatSDK.instance;
     instance.apiKey = config.apiKey;
-    instance.baseURL = config.baseURL || 'https://mrrcat.ongoru.workers.dev';
+    instance.baseURL = config.baseURL;
     instance.useNativeIAP = config.useNativeIAP !== false;
 
     // Get or create app user ID

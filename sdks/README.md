@@ -19,8 +19,11 @@ MRRCat provides official SDKs for all major platforms to handle in-app purchases
 ```swift
 import MRRCat
 
-// Configure
-try await MRRCat.configure(apiKey: "pk_live_xxxxx")
+// Configure with your self-hosted API URL
+MRRCat.shared.configure(
+    apiKey: "pk_live_xxxxx",
+    baseURL: "https://mrrcat.yourdomain.com"
+)
 
 // Check entitlement
 let isPremium = try await MRRCat.shared.hasEntitlement("premium")
@@ -37,8 +40,12 @@ if let product = products.first {
 ```kotlin
 import com.mrrcat.sdk.MRRCat
 
-// Configure
-MRRCat.configure(context, "pk_live_xxxxx")
+// Configure with your self-hosted API URL
+MRRCat.configure(
+    context = context,
+    apiKey = "pk_live_xxxxx",
+    baseURL = "https://mrrcat.yourdomain.com"
+)
 
 // Check entitlement
 lifecycleScope.launch {
@@ -54,8 +61,11 @@ MRRCat.shared.purchase(activity, product)
 ```typescript
 import MRRCat from '@mrrcat/web';
 
-// Configure
-MRRCat.configure({ apiKey: 'pk_live_xxxxx' });
+// Configure with your self-hosted API URL
+MRRCat.configure({
+    apiKey: 'pk_live_xxxxx',
+    baseURL: 'https://mrrcat.yourdomain.com'
+});
 
 // Check entitlement
 const isPremium = await MRRCat.shared.hasEntitlement('premium');
@@ -69,8 +79,11 @@ await MRRCat.shared.syncStripeSubscription('sub_xxxxx');
 ```dart
 import 'package:mrrcat_flutter/mrrcat_flutter.dart';
 
-// Configure
-await MRRCat.configure(apiKey: 'pk_live_xxxxx');
+// Configure with your self-hosted API URL
+await MRRCat.configure(
+    apiKey: 'pk_live_xxxxx',
+    baseURL: 'https://mrrcat.yourdomain.com'
+);
 
 // Check entitlement
 final isPremium = await MRRCat.instance.hasEntitlement('premium');
@@ -85,8 +98,11 @@ final info = await MRRCat.instance.purchase(products.first);
 ```typescript
 import MRRCat, { useEntitlement } from 'react-native-mrrcat';
 
-// Configure
-await MRRCat.configure({ apiKey: 'pk_live_xxxxx' });
+// Configure with your self-hosted API URL
+await MRRCat.configure({
+    apiKey: 'pk_live_xxxxx',
+    baseURL: 'https://mrrcat.yourdomain.com'
+});
 
 // Use hook
 function PremiumFeature() {

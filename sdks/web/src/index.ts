@@ -5,9 +5,12 @@
 
 // Types
 export interface MRRCatConfig {
+  /** Your MRRCat API key */
   apiKey: string;
+  /** Your MRRCat API URL (e.g., "https://mrrcat.yourdomain.com") */
+  baseURL: string;
+  /** Optional user ID. If not provided, an anonymous ID will be generated */
   appUserID?: string;
-  baseURL?: string;
 }
 
 export interface SubscriberInfo {
@@ -208,8 +211,8 @@ export class MRRCat {
 
   private constructor(config: MRRCatConfig) {
     this.apiKey = config.apiKey;
+    this.baseURL = config.baseURL;
     this.appUserID = config.appUserID || this.getOrCreateAnonymousID();
-    this.baseURL = config.baseURL || 'https://mrrcat.ongoru.workers.dev';
   }
 
   /**

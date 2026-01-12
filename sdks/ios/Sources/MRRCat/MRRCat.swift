@@ -15,7 +15,7 @@ public final class MRRCat: @unchecked Sendable {
 
     private var apiKey: String?
     private var appUserID: String?
-    private var baseURL: String = "https://mrrcat.ongoru.workers.dev"
+    private var baseURL: String = ""
     private var isConfigured: Bool = false
     private var cachedSubscriberInfo: SubscriberInfo?
     private var cacheExpiry: Date?
@@ -41,18 +41,16 @@ public final class MRRCat: @unchecked Sendable {
     /// Configure MRRCat with your API key
     /// - Parameters:
     ///   - apiKey: Your MRRCat API key
+    ///   - baseURL: Your MRRCat API URL (e.g., "https://mrrcat.yourdomain.com")
     ///   - appUserID: Optional user ID. If nil, an anonymous ID will be generated
-    ///   - baseURL: Optional custom API URL
     public func configure(
         apiKey: String,
-        appUserID: String? = nil,
-        baseURL: String? = nil
+        baseURL: String,
+        appUserID: String? = nil
     ) {
         self.apiKey = apiKey
+        self.baseURL = baseURL
         self.appUserID = appUserID ?? generateAnonymousID()
-        if let url = baseURL {
-            self.baseURL = url
-        }
         self.isConfigured = true
 
         // Start listening for StoreKit transactions
