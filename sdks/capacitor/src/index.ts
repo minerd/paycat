@@ -1,11 +1,11 @@
 /**
- * PayCat Capacitor Plugin
+ * MRRCat Capacitor Plugin
  */
 
 import { registerPlugin } from '@capacitor/core';
 
 import type {
-  PayCatPlugin,
+  MRRCatPlugin,
   ConfigureOptions,
   LoginOptions,
   SubscriberInfo,
@@ -24,30 +24,30 @@ import type {
 } from './definitions';
 
 // Register the native plugin
-const PayCatNative = registerPlugin<PayCatPlugin>('PayCat', {
-  web: () => import('./web').then(m => new m.PayCatWeb()),
+const MRRCatNative = registerPlugin<MRRCatPlugin>('MRRCat', {
+  web: () => import('./web').then(m => new m.MRRCatWeb()),
 });
 
 /**
- * PayCat SDK - Main entry point
+ * MRRCat SDK - Main entry point
  */
-class PayCat {
-  private static instance: PayCat;
-  private plugin: PayCatPlugin;
+class MRRCat {
+  private static instance: MRRCat;
+  private plugin: MRRCatPlugin;
   private configured = false;
 
   private constructor() {
-    this.plugin = PayCatNative;
+    this.plugin = MRRCatNative;
   }
 
   /**
    * Get singleton instance
    */
-  static getInstance(): PayCat {
-    if (!PayCat.instance) {
-      PayCat.instance = new PayCat();
+  static getInstance(): MRRCat {
+    if (!MRRCat.instance) {
+      MRRCat.instance = new MRRCat();
     }
-    return PayCat.instance;
+    return MRRCat.instance;
   }
 
   /**
@@ -220,16 +220,16 @@ class PayCat {
    */
   private ensureConfigured(): void {
     if (!this.configured) {
-      throw new Error('PayCat SDK not configured. Call configure() first.');
+      throw new Error('MRRCat SDK not configured. Call configure() first.');
     }
   }
 }
 
 // Export singleton
-export const paycat = PayCat.getInstance();
+export const mrrcat = MRRCat.getInstance();
 
 // Export types
 export * from './definitions';
 
 // Export default
-export default paycat;
+export default mrrcat;

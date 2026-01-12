@@ -1,13 +1,13 @@
 {
-  "name": "paycat",
+  "name": "mrrcat",
   "version": "1.0.0",
   "description": "Unified Payment & Subscription Management System for Cloudflare Workers",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:migrate": "wrangler d1 execute paycat-db --local --file=./src/db/schema.sql",
-    "db:migrate:prod": "wrangler d1 execute paycat-db --file=./src/db/schema.sql",
+    "db:migrate": "wrangler d1 execute mrrcat-db --local --file=./src/db/schema.sql",
+    "db:migrate:prod": "wrangler d1 execute mrrcat-db --file=./src/db/schema.sql",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

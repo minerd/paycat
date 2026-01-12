@@ -114,7 +114,7 @@ export async function rateLimitMiddleware(
     return next();
   } catch (err) {
     // If KV fails, allow the request but log it
-    if (err instanceof Error && err.name !== 'PayCatError') {
+    if (err instanceof Error && err.name !== 'MRRCatError') {
       console.error('Rate limit KV error:', err);
       return next();
     }

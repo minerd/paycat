@@ -1,10 +1,10 @@
 {
-  "name": "paycat-cli",
+  "name": "mrrcat-cli",
   "version": "1.0.0",
-  "description": "PayCat CLI - Manage your PayCat instance from the command line",
+  "description": "MRRCat CLI - Manage your MRRCat instance from the command line",
   "main": "dist/index.js",
   "bin": {
-    "paycat": "./dist/index.js"
+    "mrrcat": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -12,7 +12,7 @@
     "start": "node dist/index.js"
   },
   "keywords": [
-    "paycat",
+    "mrrcat",
     "subscriptions",
     "in-app-purchases",
     "cli"

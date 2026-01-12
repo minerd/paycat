@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PayCat Demo</title>
+  <title>MRRCat Demo</title>
   <style>
     * {
       box-sizing: border-box;
@@ -138,7 +138,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>PayCat Demo</h1>
+    <h1>MRRCat Demo</h1>
 
     <div id="app">
       <div class="loading">Loading...</div>
@@ -146,10 +146,10 @@
   </div>
 
   <script type="module">
-    import PayCat from 'https://unpkg.com/@paycat/web@latest/dist/index.mjs';
+    import MRRCat from 'https://unpkg.com/@mrrcat/web@latest/dist/index.mjs';
 
-    // Configure PayCat
-    PayCat.configure({
+    // Configure MRRCat
+    MRRCat.configure({
       apiKey: 'pk_test_your_api_key_here'
     });
 
@@ -158,14 +158,14 @@
     async function init() {
       try {
         const [subscriberInfo, offerings] = await Promise.all([
-          PayCat.shared.getSubscriberInfo(),
-          PayCat.shared.getOfferings()
+          MRRCat.shared.getSubscriberInfo(),
+          MRRCat.shared.getOfferings()
         ]);
 
         render(subscriberInfo, offerings);
 
         // Listen for updates
-        PayCat.shared.on('subscriberInfoUpdated', (event) => {
+        MRRCat.shared.on('subscriberInfoUpdated', (event) => {
           render(event.data, offerings);
         });
       } catch (error) {
@@ -236,7 +236,7 @@
       if (!subscriptionId) return;
 
       try {
-        await PayCat.shared.syncStripeSubscription(subscriptionId);
+        await MRRCat.shared.syncStripeSubscription(subscriptionId);
         alert('Subscription synced!');
       } catch (error) {
         alert('Failed to sync: ' + error.message);

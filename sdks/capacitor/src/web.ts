@@ -1,11 +1,11 @@
 /**
- * PayCat Web Implementation for Capacitor
+ * MRRCat Web Implementation for Capacitor
  */
 
 import { WebPlugin } from '@capacitor/core';
 
 import type {
-  PayCatPlugin,
+  MRRCatPlugin,
   ConfigureOptions,
   LoginOptions,
   SubscriberInfo,
@@ -22,9 +22,9 @@ import type {
   PluginListenerHandle,
 } from './definitions';
 
-const DEFAULT_BASE_URL = 'https://api.paycat.dev';
+const DEFAULT_BASE_URL = 'https://api.mrrcat.dev';
 
-export class PayCatWeb extends WebPlugin implements PayCatPlugin {
+export class MRRCatWeb extends WebPlugin implements MRRCatPlugin {
   private apiKey: string = '';
   private baseUrl: string = DEFAULT_BASE_URL;
   private appUserId: string | null = null;
@@ -40,10 +40,10 @@ export class PayCatWeb extends WebPlugin implements PayCatPlugin {
     }
 
     if (options.useSandbox) {
-      this.baseUrl = 'https://sandbox.api.paycat.dev';
+      this.baseUrl = 'https://sandbox.api.mrrcat.dev';
     }
 
-    this.log('PayCat configured');
+    this.log('MRRCat configured');
   }
 
   async login(options: LoginOptions): Promise<SubscriberInfo> {
@@ -143,7 +143,7 @@ export class PayCatWeb extends WebPlugin implements PayCatPlugin {
 
       // Create overlay
       const overlay = document.createElement('div');
-      overlay.id = 'paycat-paywall-overlay';
+      overlay.id = 'mrrcat-paywall-overlay';
       overlay.style.cssText = `
         position: fixed;
         top: 0;
@@ -180,13 +180,13 @@ export class PayCatWeb extends WebPlugin implements PayCatPlugin {
         const { type, data } = event.data;
 
         switch (type) {
-          case 'paycat:close':
+          case 'mrrcat:close':
             this.dismissPaywall();
             window.removeEventListener('message', messageHandler);
             resolve({ presented: true, purchased: false, restored: false });
             break;
 
-          case 'paycat:purchase':
+          case 'mrrcat:purchase':
             this.dismissPaywall();
             window.removeEventListener('message', messageHandler);
             const subscriber = await this.getSubscriberInfo();
@@ -198,7 +198,7 @@ export class PayCatWeb extends WebPlugin implements PayCatPlugin {
             });
             break;
 
-          case 'paycat:restore':
+          case 'mrrcat:restore':
             this.dismissPaywall();
             window.removeEventListener('message', messageHandler);
             const restoredSubscriber = await this.restorePurchases();
@@ -229,7 +229,7 @@ export class PayCatWeb extends WebPlugin implements PayCatPlugin {
   }
 
   private dismissPaywall(): void {
-    const overlay = document.getElementById('paycat-paywall-overlay');
+    const overlay = document.getElementById('mrrcat-paywall-overlay');
     if (overlay) {
       overlay.remove();
     }
@@ -351,7 +351,7 @@ export class PayCatWeb extends WebPlugin implements PayCatPlugin {
 
   private log(...args: any[]): void {
     if (this.debugEnabled) {
-      console.log('[PayCat]', ...args);
+      console.log('[MRRCat]', ...args);
     }
   }
 }

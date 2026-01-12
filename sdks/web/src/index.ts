@@ -1,10 +1,10 @@
 /**
- * PayCat Web SDK
+ * MRRCat Web SDK
  * Unified subscription management for web applications
  */
 
 // Types
-export interface PayCatConfig {
+export interface MRRCatConfig {
   apiKey: string;
   appUserID?: string;
   baseURL?: string;
@@ -75,10 +75,10 @@ export interface ProductInfo {
   metadata: Record<string, string>;
 }
 
-export type PayCatEventType = 'subscriberInfoUpdated' | 'error' | 'paywallEvent';
+export type MRRCatEventType = 'subscriberInfoUpdated' | 'error' | 'paywallEvent';
 
-export interface PayCatEvent {
-  type: PayCatEventType;
+export interface MRRCatEvent {
+  type: MRRCatEventType;
   data?: SubscriberInfo | Error | PaywallEvent;
 }
 
@@ -107,7 +107,7 @@ export interface PaywallOptions {
   onClose?: () => void;
 }
 
-type EventCallback = (event: PayCatEvent) => void;
+type EventCallback = (event: MRRCatEvent) => void;
 
 // API Response types
 interface ApiSubscriberResponse {
@@ -180,23 +180,23 @@ interface ApiProduct {
 }
 
 /**
- * PayCat Error
+ * MRRCat Error
  */
-export class PayCatError extends Error {
+export class MRRCatError extends Error {
   constructor(
     public code: string,
     message: string
   ) {
     super(message);
-    this.name = 'PayCatError';
+    this.name = 'MRRCatError';
   }
 }
 
 /**
- * PayCat SDK
+ * MRRCat SDK
  */
-export class PayCat {
-  private static instance: PayCat | null = null;
+export class MRRCat {
+  private static instance: MRRCat | null = null;
 
   private apiKey: string;
   private appUserID: string;
@@ -204,39 +204,39 @@ export class PayCat {
   private subscriberInfoCache: SubscriberInfo | null = null;
   private cacheExpiry: Date | null = null;
   private cacheDuration = 5 * 60 * 1000; // 5 minutes
-  private listeners: Map<PayCatEventType, Set<EventCallback>> = new Map();
+  private listeners: Map<MRRCatEventType, Set<EventCallback>> = new Map();
 
-  private constructor(config: PayCatConfig) {
+  private constructor(config: MRRCatConfig) {
     this.apiKey = config.apiKey;
     this.appUserID = config.appUserID || this.getOrCreateAnonymousID();
-    this.baseURL = config.baseURL || 'https://paycat.ongoru.workers.dev';
+    this.baseURL = config.baseURL || 'https://mrrcat.ongoru.workers.dev';
   }
 
   /**
-   * Configure PayCat SDK
+   * Configure MRRCat SDK
    */
-  static configure(config: PayCatConfig): PayCat {
-    if (!PayCat.instance) {
-      PayCat.instance = new PayCat(config);
+  static configure(config: MRRCatConfig): MRRCat {
+    if (!MRRCat.instance) {
+      MRRCat.instance = new MRRCat(config);
     }
-    return PayCat.instance;
+    return MRRCat.instance;
   }
 
   /**
    * Get shared instance
    */
-  static get shared(): PayCat {
-    if (!PayCat.instance) {
-      throw new PayCatError('not_configured', 'PayCat is not configured. Call PayCat.configure() first.');
+  static get shared(): MRRCat {
+    if (!MRRCat.instance) {
+      throw new MRRCatError('not_configured', 'MRRCat is not configured. Call MRRCat.configure() first.');
     }
-    return PayCat.instance;
+    return MRRCat.instance;
   }
 
   /**
    * Check if configured
    */
   static get isConfigured(): boolean {
-    return PayCat.instance !== null;
+    return MRRCat.instance !== null;
   }
 
   /**
@@ -396,7 +396,7 @@ export class PayCat {
 
     // Create container
     this.paywallContainer = document.createElement('div');
-    this.paywallContainer.id = 'paycat-paywall-container';
+    this.paywallContainer.id = 'mrrcat-paywall-container';
     this.paywallContainer.style.cssText = `
       position: fixed;
       top: 0;
@@ -408,17 +408,17 @@ export class PayCat {
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: paycatFadeIn 0.3s ease-out;
+      animation: mrrcatFadeIn 0.3s ease-out;
     `;
 
     // Add animation styles
     const style = document.createElement('style');
     style.textContent = `
-      @keyframes paycatFadeIn {
+      @keyframes mrrcatFadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
       }
-      @keyframes paycatSlideUp {
+      @keyframes mrrcatSlideUp {
         from { transform: translateY(100%); }
         to { transform: translateY(0); }
       }
@@ -438,7 +438,7 @@ export class PayCat {
       border: none;
       border-radius: 16px;
       background: white;
-      animation: paycatSlideUp 0.3s ease-out;
+      animation: mrrcatSlideUp 0.3s ease-out;
     `;
 
     this.paywallContainer.appendChild(this.paywallIframe);
@@ -504,12 +504,12 @@ export class PayCat {
   }
 
   private handlePaywallMessage = async (event: MessageEvent) => {
-    if (!event.data?.type?.startsWith('paycat_')) return;
+    if (!event.data?.type?.startsWith('mrrcat_')) return;
 
     const { type, packageId, eventType, data } = event.data;
 
     switch (type) {
-      case 'paycat_purchase':
+      case 'mrrcat_purchase':
         if (this.paywallOptions?.onPurchase && packageId) {
           try {
             await this.paywallOptions.onPurchase(packageId);
@@ -520,25 +520,25 @@ export class PayCat {
         }
         break;
 
-      case 'paycat_trial':
+      case 'mrrcat_trial':
         if (this.paywallOptions?.onPurchase && packageId) {
           await this.paywallOptions.onPurchase(packageId);
         }
         break;
 
-      case 'paycat_restore':
+      case 'mrrcat_restore':
         if (this.paywallOptions?.onRestore) {
           this.trackPaywallEvent('restore_started', 'current');
           await this.paywallOptions.onRestore();
         }
         break;
 
-      case 'paycat_close':
+      case 'mrrcat_close':
         this.trackPaywallEvent('close', 'current');
         this.dismissPaywall();
         break;
 
-      case 'paycat_event':
+      case 'mrrcat_event':
         if (eventType && data) {
           this.trackPaywallEvent(eventType, 'current', data.package_id);
         }
@@ -589,7 +589,7 @@ export class PayCat {
   /**
    * Add event listener
    */
-  on(event: PayCatEventType, callback: EventCallback): void {
+  on(event: MRRCatEventType, callback: EventCallback): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -599,22 +599,22 @@ export class PayCat {
   /**
    * Remove event listener
    */
-  off(event: PayCatEventType, callback: EventCallback): void {
+  off(event: MRRCatEventType, callback: EventCallback): void {
     this.listeners.get(event)?.delete(callback);
   }
 
-  private emit(event: PayCatEvent): void {
+  private emit(event: MRRCatEvent): void {
     this.listeners.get(event.type)?.forEach(callback => {
       try {
         callback(event);
       } catch (e) {
-        console.error('PayCat event listener error:', e);
+        console.error('MRRCat event listener error:', e);
       }
     });
   }
 
   private getOrCreateAnonymousID(forceNew = false): string {
-    const storageKey = 'paycat_anonymous_id';
+    const storageKey = 'mrrcat_anonymous_id';
 
     if (!forceNew && typeof localStorage !== 'undefined') {
       const stored = localStorage.getItem(storageKey);
@@ -636,7 +636,7 @@ export class PayCat {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': this.apiKey,
-      'User-Agent': 'PayCat-Web/1.0.0',
+      'User-Agent': 'MRRCat-Web/1.0.0',
     };
 
     const options: RequestInit = {
@@ -653,7 +653,7 @@ export class PayCat {
 
     if (!response.ok) {
       const error = data as ApiError;
-      throw new PayCatError(error.error?.code || 'unknown', error.error?.message || 'Request failed');
+      throw new MRRCatError(error.error?.code || 'unknown', error.error?.message || 'Request failed');
     }
 
     return data as T;
@@ -694,4 +694,4 @@ export class PayCat {
 }
 
 // Default export
-export default PayCat;
+export default MRRCat;

@@ -1,9 +1,9 @@
 /**
- * PayCat React Hooks
+ * MRRCat React Hooks
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import PayCat, { SubscriberInfo, PayCatError, ProductDetails } from './index';
+import MRRCat, { SubscriberInfo, MRRCatError, ProductDetails } from './index';
 
 /**
  * Hook to get and subscribe to subscriber info updates
@@ -11,21 +11,21 @@ import PayCat, { SubscriberInfo, PayCatError, ProductDetails } from './index';
 export function useSubscriberInfo(): {
   subscriberInfo: SubscriberInfo | null;
   loading: boolean;
-  error: PayCatError | null;
+  error: MRRCatError | null;
   refresh: () => Promise<void>;
 } {
   const [subscriberInfo, setSubscriberInfo] = useState<SubscriberInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<PayCatError | null>(null);
+  const [error, setError] = useState<MRRCatError | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const info = await PayCat.shared.getSubscriberInfo(true);
+      const info = await MRRCat.shared.getSubscriberInfo(true);
       setSubscriberInfo(info);
     } catch (e) {
-      setError(e as PayCatError);
+      setError(e as MRRCatError);
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export function useSubscriberInfo(): {
     refresh();
 
     // Subscribe to updates
-    const unsubscribe = PayCat.shared.on('subscriberInfoUpdated', (event) => {
+    const unsubscribe = MRRCat.shared.on('subscriberInfoUpdated', (event) => {
       setSubscriberInfo(event.data as SubscriberInfo);
     });
 
@@ -54,7 +54,7 @@ export function useSubscriberInfo(): {
 export function useEntitlement(identifier: string): {
   isActive: boolean;
   loading: boolean;
-  error: PayCatError | null;
+  error: MRRCatError | null;
 } {
   const { subscriberInfo, loading, error } = useSubscriberInfo();
 
@@ -69,7 +69,7 @@ export function useEntitlement(identifier: string): {
 export function useHasActiveSubscription(): {
   hasActive: boolean;
   loading: boolean;
-  error: PayCatError | null;
+  error: MRRCatError | null;
 } {
   const { subscriberInfo, loading, error } = useSubscriberInfo();
 
@@ -86,21 +86,21 @@ export function useHasActiveSubscription(): {
 export function useProducts(productIds: string[]): {
   products: ProductDetails[];
   loading: boolean;
-  error: PayCatError | null;
+  error: MRRCatError | null;
   refresh: () => Promise<void>;
 } {
   const [products, setProducts] = useState<ProductDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<PayCatError | null>(null);
+  const [error, setError] = useState<MRRCatError | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedProducts = await PayCat.shared.getProducts(productIds);
+      const fetchedProducts = await MRRCat.shared.getProducts(productIds);
       setProducts(fetchedProducts);
     } catch (e) {
-      setError(e as PayCatError);
+      setError(e as MRRCatError);
     } finally {
       setLoading(false);
     }
@@ -120,18 +120,18 @@ export function usePurchase(): {
   purchase: (productId: string) => Promise<SubscriberInfo>;
   restore: () => Promise<SubscriberInfo>;
   loading: boolean;
-  error: PayCatError | null;
+  error: MRRCatError | null;
 } {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<PayCatError | null>(null);
+  const [error, setError] = useState<MRRCatError | null>(null);
 
   const purchase = useCallback(async (productId: string): Promise<SubscriberInfo> => {
     try {
       setLoading(true);
       setError(null);
-      return await PayCat.shared.purchase(productId);
+      return await MRRCat.shared.purchase(productId);
     } catch (e) {
-      setError(e as PayCatError);
+      setError(e as MRRCatError);
       throw e;
     } finally {
       setLoading(false);
@@ -142,9 +142,9 @@ export function usePurchase(): {
     try {
       setLoading(true);
       setError(null);
-      return await PayCat.shared.restorePurchases();
+      return await MRRCat.shared.restorePurchases();
     } catch (e) {
-      setError(e as PayCatError);
+      setError(e as MRRCatError);
       throw e;
     } finally {
       setLoading(false);
@@ -161,8 +161,8 @@ export function useAppUserID(): string | null {
   const [appUserID, setAppUserID] = useState<string | null>(null);
 
   useEffect(() => {
-    if (PayCat.isConfigured) {
-      setAppUserID(PayCat.shared.currentAppUserID);
+    if (MRRCat.isConfigured) {
+      setAppUserID(MRRCat.shared.currentAppUserID);
     }
   }, []);
 

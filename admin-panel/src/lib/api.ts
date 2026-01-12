@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.PROD
-  ? 'https://paycat.ongoru.workers.dev/admin'
+  ? 'https://mrrcat.ongoru.workers.dev/admin'
   : '/admin';
 
 class ApiClient {

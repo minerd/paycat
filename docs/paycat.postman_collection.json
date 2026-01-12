@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "PayCat API",
+    "name": "MRRCat API",
     "description": "Unified Payment & Subscription Management System API Collection",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -385,7 +385,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"url\": \"https://your-server.com/webhooks/paycat\",\n  \"events\": [\"initial_purchase\", \"renewal\", \"cancellation\", \"expiration\"]\n}"
+              "raw": "{\n  \"url\": \"https://your-server.com/webhooks/mrrcat\",\n  \"events\": [\"initial_purchase\", \"renewal\", \"cancellation\", \"expiration\"]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/v1/webhooks",

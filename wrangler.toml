@@ -1,11 +1,11 @@
-name = "paycat"
+name = "mrrcat"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 # D1 Database
 [[d1_databases]]
 binding = "DB"
-database_name = "paycat-db"
+database_name = "mrrcat-db"
 database_id = "36e38604-505d-4a90-b3d3-57a5679f4ee9"
 
 # KV Namespace for caching

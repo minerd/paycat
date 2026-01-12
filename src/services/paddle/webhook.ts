@@ -121,7 +121,7 @@ export function parsePassthrough(passthrough?: string): PaddlePassthrough | null
 }
 
 /**
- * Map Paddle event type to PayCat event type
+ * Map Paddle event type to MRRCat event type
  */
 export function mapPaddleEventType(paddleEvent: PaddleEventType): string {
   const mapping: Record<string, string> = {
@@ -154,9 +154,9 @@ export function mapPaddleEventType(paddleEvent: PaddleEventType): string {
 }
 
 /**
- * Map Paddle subscription status to PayCat status
+ * Map Paddle subscription status to MRRCat status
  */
-export function mapPaddleStatusToPayCat(paddleStatus: string): string {
+export function mapPaddleStatusToMRRCat(paddleStatus: string): string {
   const mapping: Record<string, string> = {
     active: 'active',
     trialing: 'active',

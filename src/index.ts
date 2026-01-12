@@ -1,5 +1,5 @@
 /**
- * PayCat - Unified Payment & Subscription Management System
+ * MRRCat - Unified Payment & Subscription Management System
  * Cloudflare Workers Entry Point
  */
 
@@ -9,7 +9,7 @@ import { prettyJSON } from 'hono/pretty-json';
 import { secureHeaders } from 'hono/secure-headers';
 
 import type { Env } from './types';
-import { errorMiddleware, PayCatError } from './middleware/error';
+import { errorMiddleware, MRRCatError } from './middleware/error';
 import { loggingMiddleware } from './middleware/logging';
 import { authMiddleware } from './middleware/auth';
 import { rateLimitMiddleware } from './middleware/rate-limit';
@@ -47,7 +47,7 @@ app.use('*', rateLimitMiddleware);
 // Health check (no auth required)
 app.get('/', (c) => {
   return c.json({
-    name: 'PayCat',
+    name: 'MRRCat',
     version: '1.0.0',
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -103,9 +103,9 @@ app.notFound((c) => {
 
 // Global error handler (catches errors that bypass middleware)
 app.onError((err, c) => {
-  // Handle PayCatError
-  if (err instanceof Error && err.name === 'PayCatError' && 'code' in err && 'status' in err) {
-    const payCatErr = err as PayCatError;
+  // Handle MRRCatError
+  if (err instanceof Error && err.name === 'MRRCatError' && 'code' in err && 'status' in err) {
+    const payCatErr = err as MRRCatError;
     return c.json(payCatErr.toJSON(), payCatErr.status as 400 | 401 | 403 | 404 | 429 | 500 | 502);
   }
 

@@ -1,5 +1,5 @@
 /**
- * Database query functions for PayCat
+ * Database query functions for MRRCat
  */
 
 import type {

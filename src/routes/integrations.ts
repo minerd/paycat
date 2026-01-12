@@ -449,7 +449,7 @@ async function testIntegrationConnection(integration: any): Promise<string> {
       const slackResponse = await fetch(integration.config.webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: '🧪 PayCat integration test - connection successful!' }),
+        body: JSON.stringify({ text: '🧪 MRRCat integration test - connection successful!' }),
       });
       if (!slackResponse.ok) throw new Error('Slack webhook failed');
       return 'Slack message sent successfully';

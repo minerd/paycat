@@ -807,7 +807,7 @@ export function renderPaywallHTML(
 <body>
   <div class="paywall" data-template-id="${template.id}">
     <div class="header">
-      ${content.closeButton ? '<button class="close-btn" onclick="PayCat.close()">✕</button>' : ''}
+      ${content.closeButton ? '<button class="close-btn" onclick="MRRCat.close()">✕</button>' : ''}
       ${content.headerImage ? `<img src="${content.headerImage}" alt="" class="header-image">` : ''}
       <h1>${content.title}</h1>
       ${content.subtitle ? `<p>${content.subtitle}</p>` : ''}
@@ -840,22 +840,22 @@ export function renderPaywallHTML(
         `).join('')}
       </div>
 
-      <button class="cta-btn" onclick="PayCat.purchase()">${content.ctaButton.text}</button>
+      <button class="cta-btn" onclick="MRRCat.purchase()">${content.ctaButton.text}</button>
 
       ${content.secondaryButton ? `
-      <button class="secondary-btn" onclick="PayCat.startTrial()">${content.secondaryButton.text}</button>
+      <button class="secondary-btn" onclick="MRRCat.startTrial()">${content.secondaryButton.text}</button>
       ` : ''}
     </div>
 
     <div class="footer">
       ${content.termsText ? `<p class="terms">${content.termsText}</p>` : ''}
-      ${content.restoreText ? `<button class="restore" onclick="PayCat.restore()">${content.restoreText}</button>` : ''}
+      ${content.restoreText ? `<button class="restore" onclick="MRRCat.restore()">${content.restoreText}</button>` : ''}
     </div>
   </div>
 
   <script>
-    // PayCat Paywall SDK
-    window.PayCat = {
+    // MRRCat Paywall SDK
+    window.MRRCat = {
       selectedPackage: '${packages[0]?.identifier || ''}',
 
       selectPackage: function(id) {
@@ -868,35 +868,35 @@ export function renderPaywallHTML(
 
       purchase: function() {
         this.trackEvent('purchase_started', { package_id: this.selectedPackage });
-        window.parent.postMessage({ type: 'paycat_purchase', packageId: this.selectedPackage }, '*');
+        window.parent.postMessage({ type: 'mrrcat_purchase', packageId: this.selectedPackage }, '*');
       },
 
       startTrial: function() {
         this.trackEvent('trial_started', { package_id: this.selectedPackage });
-        window.parent.postMessage({ type: 'paycat_trial', packageId: this.selectedPackage }, '*');
+        window.parent.postMessage({ type: 'mrrcat_trial', packageId: this.selectedPackage }, '*');
       },
 
       restore: function() {
         this.trackEvent('restore_started');
-        window.parent.postMessage({ type: 'paycat_restore' }, '*');
+        window.parent.postMessage({ type: 'mrrcat_restore' }, '*');
       },
 
       close: function() {
         this.trackEvent('close');
-        window.parent.postMessage({ type: 'paycat_close' }, '*');
+        window.parent.postMessage({ type: 'mrrcat_close' }, '*');
       },
 
       trackEvent: function(type, data) {
-        window.parent.postMessage({ type: 'paycat_event', eventType: type, data: data }, '*');
+        window.parent.postMessage({ type: 'mrrcat_event', eventType: type, data: data }, '*');
       }
     };
 
     // Track impression
-    PayCat.trackEvent('impression');
+    MRRCat.trackEvent('impression');
 
     // Package selection
     document.querySelectorAll('.package').forEach(el => {
-      el.addEventListener('click', () => PayCat.selectPackage(el.dataset.packageId));
+      el.addEventListener('click', () => MRRCat.selectPackage(el.dataset.packageId));
     });
 
     ${config.customJS || ''}

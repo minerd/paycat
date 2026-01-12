@@ -23,7 +23,7 @@ export default function Layout() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <span className="text-xl font-bold text-indigo-600">PayCat</span>
+            <span className="text-xl font-bold text-indigo-600">MRRCat</span>
             <span className="ml-2 text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">
               Admin
             </span>

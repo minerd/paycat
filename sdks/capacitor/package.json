@@ -1,7 +1,7 @@
 {
-  "name": "@anthropic/paycat-capacitor",
+  "name": "@anthropic/mrrcat-capacitor",
   "version": "1.0.0",
-  "description": "PayCat SDK for Capacitor and Cordova applications",
+  "description": "MRRCat SDK for Capacitor and Cordova applications",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
@@ -11,22 +11,22 @@
     "android/build.gradle",
     "dist/",
     "ios/Plugin/",
-    "PayCatCapacitor.podspec"
+    "MRRCatCapacitor.podspec"
   ],
   "author": "Anthropic",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropic/paycat-capacitor.git"
+    "url": "https://github.com/anthropic/mrrcat-capacitor.git"
   },
   "bugs": {
-    "url": "https://github.com/anthropic/paycat-capacitor/issues"
+    "url": "https://github.com/anthropic/mrrcat-capacitor/issues"
   },
   "keywords": [
     "capacitor",
     "plugin",
     "cordova",
-    "paycat",
+    "mrrcat",
     "in-app-purchases",
     "subscriptions",
     "payments"
@@ -41,7 +41,7 @@
     "eslint": "eslint . --ext ts",
     "prettier": "prettier \"**/*.{css,html,ts,js,java}\"",
     "swiftlint": "node-swiftlint",
-    "docgen": "docgen --api PayCatPlugin --output-readme README.md --output-json dist/docs.json",
+    "docgen": "docgen --api MRRCatPlugin --output-readme README.md --output-json dist/docs.json",
     "build": "npm run clean && npm run docgen && tsc && rollup -c rollup.config.js",
     "clean": "rimraf ./dist",
     "watch": "tsc --watch",
@@ -80,7 +80,7 @@
     }
   },
   "cordova": {
-    "id": "cordova-plugin-paycat",
+    "id": "cordova-plugin-mrrcat",
     "platforms": [
       "ios",
       "android"

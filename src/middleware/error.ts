@@ -30,7 +30,7 @@ export interface ApiError {
 /**
  * Custom API error class
  */
-export class PayCatError extends Error {
+export class MRRCatError extends Error {
   constructor(
     public readonly code: ErrorCode,
     message: string,
@@ -38,7 +38,7 @@ export class PayCatError extends Error {
     public readonly details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'PayCatError';
+    this.name = 'MRRCatError';
   }
 
   toJSON(): { error: ApiError } {
@@ -62,9 +62,9 @@ export async function errorMiddleware(
   try {
     await next();
   } catch (err) {
-    // Check if it's a PayCatError by name (safer than instanceof for bundled code)
-    if (err instanceof Error && err.name === 'PayCatError' && 'code' in err && 'status' in err && 'toJSON' in err) {
-      const payCatErr = err as PayCatError;
+    // Check if it's a MRRCatError by name (safer than instanceof for bundled code)
+    if (err instanceof Error && err.name === 'MRRCatError' && 'code' in err && 'status' in err && 'toJSON' in err) {
+      const payCatErr = err as MRRCatError;
       const status = payCatErr.status as 200 | 400 | 401 | 403 | 404 | 429 | 500 | 502;
       return c.json(payCatErr.toJSON(), status);
     }
@@ -101,38 +101,38 @@ export async function errorMiddleware(
 // Convenience error creators
 export const Errors = {
   badRequest: (message: string, details?: Record<string, unknown>) =>
-    new PayCatError('bad_request', message, 400, details),
+    new MRRCatError('bad_request', message, 400, details),
 
   unauthorized: (message = 'Unauthorized') =>
-    new PayCatError('unauthorized', message, 401),
+    new MRRCatError('unauthorized', message, 401),
 
   forbidden: (message = 'Forbidden') =>
-    new PayCatError('forbidden', message, 403),
+    new MRRCatError('forbidden', message, 403),
 
   notFound: (resource: string) =>
-    new PayCatError('not_found', `${resource} not found`, 404),
+    new MRRCatError('not_found', `${resource} not found`, 404),
 
   validationError: (message: string, details?: Record<string, unknown>) =>
-    new PayCatError('validation_error', message, 400, details),
+    new MRRCatError('validation_error', message, 400, details),
 
   platformError: (platform: string, message: string, details?: Record<string, unknown>) =>
-    new PayCatError('platform_error', `${platform}: ${message}`, 502, details),
+    new MRRCatError('platform_error', `${platform}: ${message}`, 502, details),
 
   receiptInvalid: (message: string) =>
-    new PayCatError('receipt_invalid', message, 400),
+    new MRRCatError('receipt_invalid', message, 400),
 
   subscriptionNotFound: () =>
-    new PayCatError('subscription_not_found', 'Subscription not found', 404),
+    new MRRCatError('subscription_not_found', 'Subscription not found', 404),
 
   subscriberNotFound: () =>
-    new PayCatError('subscriber_not_found', 'Subscriber not found', 404),
+    new MRRCatError('subscriber_not_found', 'Subscriber not found', 404),
 
   configurationError: (message: string) =>
-    new PayCatError('configuration_error', message, 500),
+    new MRRCatError('configuration_error', message, 500),
 
   rateLimited: () =>
-    new PayCatError('rate_limited', 'Rate limit exceeded', 429),
+    new MRRCatError('rate_limited', 'Rate limit exceeded', 429),
 
   internal: (message = 'Internal server error') =>
-    new PayCatError('internal_error', message, 500),
+    new MRRCatError('internal_error', message, 500),
 };

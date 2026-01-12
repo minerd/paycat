@@ -210,7 +210,7 @@ export interface PaddlePassthrough {
   product_id?: string;
 }
 
-// Paddle Status to PayCat Status mapping
+// Paddle Status to MRRCat Status mapping
 export const PADDLE_STATUS_MAP: Record<string, string> = {
   active: 'active',
   trialing: 'active', // Trial is still active

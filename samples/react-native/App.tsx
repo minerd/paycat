@@ -10,16 +10,16 @@ import {
   Alert,
 } from 'react-native';
 
-import PayCat, {
+import MRRCat, {
   useSubscriberInfo,
   useEntitlement,
   SubscriberInfo,
   Offering,
   Package,
-} from 'react-native-paycat';
+} from 'react-native-mrrcat';
 
-// Initialize PayCat
-PayCat.configure({
+// Initialize MRRCat
+MRRCat.configure({
   apiKey: 'pk_test_your_api_key_here',
 });
 
@@ -27,7 +27,7 @@ const App = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>PayCat Demo</Text>
+        <Text style={styles.title}>MRRCat Demo</Text>
 
         <SubscriptionStatus />
         <OfferingsSection />
@@ -92,7 +92,7 @@ const OfferingsSection = () => {
 
   const loadOfferings = async () => {
     try {
-      const current = await PayCat.shared.getCurrentOffering();
+      const current = await MRRCat.shared.getCurrentOffering();
       setOffering(current);
     } catch (error) {
       console.error('Failed to load offerings:', error);
@@ -137,7 +137,7 @@ const PackageCard = ({ package: pkg }: { package: Package }) => {
 
     setPurchasing(true);
     try {
-      await PayCat.shared.purchase(product.storeProductId);
+      await MRRCat.shared.purchase(product.storeProductId);
       Alert.alert('Success', 'Purchase completed!');
     } catch (error: any) {
       if (error.code !== 'purchase_cancelled') {
@@ -187,7 +187,7 @@ const ActionsSection = () => {
   const handleRestore = async () => {
     setRestoring(true);
     try {
-      await PayCat.shared.restorePurchases();
+      await MRRCat.shared.restorePurchases();
       Alert.alert('Success', 'Purchases restored!');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Restore failed');

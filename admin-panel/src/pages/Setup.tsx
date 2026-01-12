@@ -29,7 +29,7 @@ export default function Setup() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h1 className="text-center text-3xl font-bold text-gray-900">PayCat</h1>
+          <h1 className="text-center text-3xl font-bold text-gray-900">MRRCat</h1>
           <h2 className="mt-2 text-center text-lg text-gray-600">Initial Setup</h2>
           <p className="mt-2 text-center text-sm text-gray-500">
             Create your admin account to get started

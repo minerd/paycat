@@ -1,23 +1,23 @@
 {
-  "name": "com.paycat.sdk",
+  "name": "com.mrrcat.sdk",
   "version": "1.0.0",
-  "displayName": "PayCat SDK",
+  "displayName": "MRRCat SDK",
   "description": "Unified subscription management for Unity games - iOS, Android, and Web support",
   "unity": "2020.3",
   "unityRelease": "0f1",
-  "documentationUrl": "https://github.com/your-org/paycat",
-  "changelogUrl": "https://github.com/your-org/paycat/releases",
-  "licensesUrl": "https://github.com/your-org/paycat/blob/main/LICENSE",
+  "documentationUrl": "https://github.com/your-org/mrrcat",
+  "changelogUrl": "https://github.com/your-org/mrrcat/releases",
+  "licensesUrl": "https://github.com/your-org/mrrcat/blob/main/LICENSE",
   "keywords": [
     "subscriptions",
     "in-app-purchases",
     "iap",
     "monetization",
-    "paycat"
+    "mrrcat"
   ],
   "author": {
-    "name": "PayCat",
-    "url": "https://paycat.dev"
+    "name": "MRRCat",
+    "url": "https://mrrcat.dev"
   },
   "dependencies": {}
 }

@@ -1,5 +1,5 @@
 /**
- * PayCat React Native SDK
+ * MRRCat React Native SDK
  * Unified subscription management across iOS, Android, and Web
  */
 
@@ -7,7 +7,7 @@ import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
-export interface PayCatConfig {
+export interface MRRCatConfig {
   apiKey: string;
   appUserID?: string;
   baseURL?: string;
@@ -80,10 +80,10 @@ export interface Package {
   displayName: string | null;
   description: string | null;
   packageType: PackageType;
-  products: PayCatProduct[];
+  products: MRRCatProduct[];
 }
 
-export interface PayCatProduct {
+export interface MRRCatProduct {
   storeProductId: string;
   platform: Platform;
   displayName: string | null;
@@ -96,14 +96,14 @@ export interface PayCatProduct {
 }
 
 // Events
-export type PayCatEventType = 'subscriberInfoUpdated' | 'purchaseCompleted' | 'purchaseFailed' | 'restoreCompleted';
+export type MRRCatEventType = 'subscriberInfoUpdated' | 'purchaseCompleted' | 'purchaseFailed' | 'restoreCompleted';
 
-export interface PayCatEvent {
-  type: PayCatEventType;
-  data?: SubscriberInfo | PayCatError | ProductDetails;
+export interface MRRCatEvent {
+  type: MRRCatEventType;
+  data?: SubscriberInfo | MRRCatError | ProductDetails;
 }
 
-type EventCallback = (event: PayCatEvent) => void;
+type EventCallback = (event: MRRCatEvent) => void;
 
 // API Response types
 interface ApiSubscriberResponse {
@@ -169,50 +169,50 @@ interface ApiProduct {
 }
 
 /**
- * PayCat Error
+ * MRRCat Error
  */
-export class PayCatError extends Error {
+export class MRRCatError extends Error {
   code: string;
 
   constructor(code: string, message: string) {
     super(message);
-    this.name = 'PayCatError';
+    this.name = 'MRRCatError';
     this.code = code;
   }
 }
 
 /**
- * PayCat React Native SDK
+ * MRRCat React Native SDK
  */
-class PayCatSDK {
-  private static instance: PayCatSDK | null = null;
+class MRRCatSDK {
+  private static instance: MRRCatSDK | null = null;
 
   private apiKey: string = '';
   private appUserID: string = '';
-  private baseURL: string = 'https://paycat.ongoru.workers.dev';
+  private baseURL: string = 'https://mrrcat.ongoru.workers.dev';
   private useNativeIAP: boolean = true;
 
   private subscriberInfoCache: SubscriberInfo | null = null;
   private cacheExpiry: Date | null = null;
   private cacheDuration = 5 * 60 * 1000; // 5 minutes
 
-  private listeners: Map<PayCatEventType, Set<EventCallback>> = new Map();
+  private listeners: Map<MRRCatEventType, Set<EventCallback>> = new Map();
   private iapModule: any = null;
   private iapEventEmitter: NativeEventEmitter | null = null;
 
   private constructor() {}
 
   /**
-   * Configure PayCat SDK
+   * Configure MRRCat SDK
    */
-  static async configure(config: PayCatConfig): Promise<PayCatSDK> {
-    if (!PayCatSDK.instance) {
-      PayCatSDK.instance = new PayCatSDK();
+  static async configure(config: MRRCatConfig): Promise<MRRCatSDK> {
+    if (!MRRCatSDK.instance) {
+      MRRCatSDK.instance = new MRRCatSDK();
     }
 
-    const instance = PayCatSDK.instance;
+    const instance = MRRCatSDK.instance;
     instance.apiKey = config.apiKey;
-    instance.baseURL = config.baseURL || 'https://paycat.ongoru.workers.dev';
+    instance.baseURL = config.baseURL || 'https://mrrcat.ongoru.workers.dev';
     instance.useNativeIAP = config.useNativeIAP !== false;
 
     // Get or create app user ID
@@ -231,7 +231,7 @@ class PayCatSDK {
     try {
       await instance.getSubscriberInfo();
     } catch (e) {
-      console.warn('PayCat: Failed to fetch initial subscriber info:', e);
+      console.warn('MRRCat: Failed to fetch initial subscriber info:', e);
     }
 
     return instance;
@@ -240,18 +240,18 @@ class PayCatSDK {
   /**
    * Get shared instance
    */
-  static get shared(): PayCatSDK {
-    if (!PayCatSDK.instance) {
-      throw new PayCatError('not_configured', 'PayCat is not configured. Call PayCat.configure() first.');
+  static get shared(): MRRCatSDK {
+    if (!MRRCatSDK.instance) {
+      throw new MRRCatError('not_configured', 'MRRCat is not configured. Call MRRCat.configure() first.');
     }
-    return PayCatSDK.instance;
+    return MRRCatSDK.instance;
   }
 
   /**
    * Check if configured
    */
   static get isConfigured(): boolean {
-    return PayCatSDK.instance !== null && PayCatSDK.instance.apiKey !== '';
+    return MRRCatSDK.instance !== null && MRRCatSDK.instance.apiKey !== '';
   }
 
   /**
@@ -279,7 +279,7 @@ class PayCatSDK {
 
       const isAvailable = await RNIap.initConnection();
       if (!isAvailable) {
-        console.warn('PayCat: Store is not available');
+        console.warn('MRRCat: Store is not available');
         return;
       }
 
@@ -293,11 +293,11 @@ class PayCatSDK {
       RNIap.purchaseErrorListener((error: any) => {
         this.emit({
           type: 'purchaseFailed',
-          data: new PayCatError('purchase_failed', error.message || 'Purchase failed'),
+          data: new MRRCatError('purchase_failed', error.message || 'Purchase failed'),
         });
       });
     } catch (e) {
-      console.warn('PayCat: react-native-iap not available, using API-only mode');
+      console.warn('MRRCat: react-native-iap not available, using API-only mode');
       this.useNativeIAP = false;
     }
   }
@@ -372,7 +372,7 @@ class PayCatSDK {
    */
   async getProducts(productIds: string[]): Promise<ProductDetails[]> {
     if (!this.useNativeIAP || !this.iapModule) {
-      throw new PayCatError('iap_unavailable', 'Native IAP is not available');
+      throw new MRRCatError('iap_unavailable', 'Native IAP is not available');
     }
 
     const products = await this.iapModule.getSubscriptions({ skus: productIds });
@@ -394,7 +394,7 @@ class PayCatSDK {
    */
   async purchase(productId: string): Promise<SubscriberInfo> {
     if (!this.useNativeIAP || !this.iapModule) {
-      throw new PayCatError('iap_unavailable', 'Native IAP is not available');
+      throw new MRRCatError('iap_unavailable', 'Native IAP is not available');
     }
 
     try {
@@ -403,7 +403,7 @@ class PayCatSDK {
       // Wait for purchase to complete via listener
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new PayCatError('purchase_timeout', 'Purchase timed out'));
+          reject(new MRRCatError('purchase_timeout', 'Purchase timed out'));
         }, 60000);
 
         const unsubscribe = this.on('subscriberInfoUpdated', (event) => {
@@ -420,9 +420,9 @@ class PayCatSDK {
       });
     } catch (e: any) {
       if (e.code === 'E_USER_CANCELLED') {
-        throw new PayCatError('purchase_cancelled', 'Purchase was cancelled by user');
+        throw new MRRCatError('purchase_cancelled', 'Purchase was cancelled by user');
       }
-      throw new PayCatError('purchase_failed', e.message || 'Purchase failed');
+      throw new MRRCatError('purchase_failed', e.message || 'Purchase failed');
     }
   }
 
@@ -431,7 +431,7 @@ class PayCatSDK {
    */
   async restorePurchases(): Promise<SubscriberInfo> {
     if (!this.useNativeIAP || !this.iapModule) {
-      throw new PayCatError('iap_unavailable', 'Native IAP is not available');
+      throw new MRRCatError('iap_unavailable', 'Native IAP is not available');
     }
 
     try {
@@ -444,7 +444,7 @@ class PayCatSDK {
       this.emit({ type: 'restoreCompleted' });
       return this.getSubscriberInfo(true);
     } catch (e: any) {
-      throw new PayCatError('restore_failed', e.message || 'Restore failed');
+      throw new MRRCatError('restore_failed', e.message || 'Restore failed');
     }
   }
 
@@ -568,16 +568,16 @@ class PayCatSDK {
       const info = await this.getSubscriberInfo(true);
       this.emit({ type: 'purchaseCompleted', data: info });
     } catch (e) {
-      console.error('PayCat: Failed to handle purchase:', e);
+      console.error('MRRCat: Failed to handle purchase:', e);
       this.emit({
         type: 'purchaseFailed',
-        data: new PayCatError('sync_failed', 'Failed to sync purchase'),
+        data: new MRRCatError('sync_failed', 'Failed to sync purchase'),
       });
     }
   }
 
   /**
-   * Sync purchase to PayCat backend
+   * Sync purchase to MRRCat backend
    */
   private async syncPurchase(purchase: any): Promise<void> {
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
@@ -602,7 +602,7 @@ class PayCatSDK {
   /**
    * Add event listener
    */
-  on(event: PayCatEventType, callback: EventCallback): () => void {
+  on(event: MRRCatEventType, callback: EventCallback): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -617,22 +617,22 @@ class PayCatSDK {
   /**
    * Remove event listener
    */
-  off(event: PayCatEventType, callback: EventCallback): void {
+  off(event: MRRCatEventType, callback: EventCallback): void {
     this.listeners.get(event)?.delete(callback);
   }
 
-  private emit(event: PayCatEvent): void {
+  private emit(event: MRRCatEvent): void {
     this.listeners.get(event.type)?.forEach(callback => {
       try {
         callback(event);
       } catch (e) {
-        console.error('PayCat event listener error:', e);
+        console.error('MRRCat event listener error:', e);
       }
     });
   }
 
   private async getOrCreateAnonymousID(forceNew = false): Promise<string> {
-    const storageKey = 'paycat_anonymous_id';
+    const storageKey = 'mrrcat_anonymous_id';
 
     if (!forceNew) {
       try {
@@ -660,7 +660,7 @@ class PayCatSDK {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': this.apiKey,
-      'User-Agent': `PayCat-ReactNative/1.0.0 ${Platform.OS}`,
+      'User-Agent': `MRRCat-ReactNative/1.0.0 ${Platform.OS}`,
     };
 
     const options: RequestInit = {
@@ -676,7 +676,7 @@ class PayCatSDK {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new PayCatError(data.error?.code || 'unknown', data.error?.message || 'Request failed');
+      throw new MRRCatError(data.error?.code || 'unknown', data.error?.message || 'Request failed');
     }
 
     return data as T;
@@ -727,5 +727,5 @@ export {
 } from './hooks';
 
 // Export class and convenience alias
-export { PayCatSDK as PayCat };
-export default PayCatSDK;
+export { MRRCatSDK as MRRCat };
+export default MRRCatSDK;

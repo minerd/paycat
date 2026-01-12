@@ -1,7 +1,7 @@
 {
-  "name": "react-native-paycat",
+  "name": "react-native-mrrcat",
   "version": "1.0.0",
-  "description": "PayCat React Native SDK - Unified subscription management across iOS, Android, and Web",
+  "description": "MRRCat React Native SDK - Unified subscription management across iOS, Android, and Web",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
   "types": "lib/typescript/index.d.ts",
@@ -29,16 +29,16 @@
     "android",
     "in-app-purchase",
     "subscription",
-    "paycat",
+    "mrrcat",
     "revenuecat"
   ],
-  "repository": "https://github.com/minerd/paycat",
-  "author": "PayCat",
+  "repository": "https://github.com/minerd/mrrcat",
+  "author": "MRRCat",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/minerd/paycat/issues"
+    "url": "https://github.com/minerd/mrrcat/issues"
   },
-  "homepage": "https://github.com/minerd/paycat#readme",
+  "homepage": "https://github.com/minerd/mrrcat#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

@@ -376,7 +376,7 @@ webhooksRouter.post('/:id/test', async (c) => {
     type: 'test',
     created_at: new Date().toISOString(),
     data: {
-      message: 'This is a test webhook from PayCat',
+      message: 'This is a test webhook from MRRCat',
     },
   };
 
@@ -397,9 +397,9 @@ webhooksRouter.post('/:id/test', async (c) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-PayCat-Signature': `t=${timestamp},v1=${signature}`,
-        'X-PayCat-Delivery-ID': 'test',
-        'User-Agent': 'PayCat-Webhook/1.0',
+        'X-MRRCat-Signature': `t=${timestamp},v1=${signature}`,
+        'X-MRRCat-Delivery-ID': 'test',
+        'User-Agent': 'MRRCat-Webhook/1.0',
       },
       body: payloadString,
       signal: controller.signal,

@@ -124,9 +124,9 @@ async function attemptDelivery(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-PayCat-Signature': `t=${timestamp},v1=${signature}`,
-        'X-PayCat-Delivery-ID': deliveryId,
-        'User-Agent': 'PayCat-Webhook/1.0',
+        'X-MRRCat-Signature': `t=${timestamp},v1=${signature}`,
+        'X-MRRCat-Delivery-ID': deliveryId,
+        'User-Agent': 'MRRCat-Webhook/1.0',
       },
       body: payload,
       signal: controller.signal,

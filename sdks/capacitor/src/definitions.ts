@@ -1,8 +1,8 @@
 /**
- * PayCat Capacitor Plugin Definitions
+ * MRRCat Capacitor Plugin Definitions
  */
 
-export interface PayCatPlugin {
+export interface MRRCatPlugin {
   /**
    * Configure the SDK with API key
    */

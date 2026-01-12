@@ -320,7 +320,7 @@ async function sendToAmplitude(config: AmplitudeConfig, event: IntegrationEvent)
     events: [
       {
         user_id: event.appUserId,
-        event_type: `paycat_${event.type}`,
+        event_type: `mrrcat_${event.type}`,
         time: event.timestamp,
         event_properties: {
           product_id: event.productId,
@@ -345,7 +345,7 @@ async function sendToAmplitude(config: AmplitudeConfig, event: IntegrationEvent)
 
 async function sendToMixpanel(config: MixpanelConfig, event: IntegrationEvent): Promise<void> {
   const mixpanelEvent = {
-    event: `PayCat ${formatEventName(event.type)}`,
+    event: `MRRCat ${formatEventName(event.type)}`,
     properties: {
       token: config.token,
       distinct_id: event.appUserId,
@@ -366,7 +366,7 @@ async function sendToMixpanel(config: MixpanelConfig, event: IntegrationEvent): 
 async function sendToSegment(config: SegmentConfig, event: IntegrationEvent): Promise<void> {
   const segmentEvent = {
     userId: event.appUserId,
-    event: `PayCat ${formatEventName(event.type)}`,
+    event: `MRRCat ${formatEventName(event.type)}`,
     properties: {
       product_id: event.productId,
       platform: event.platform,
@@ -399,7 +399,7 @@ async function sendToFirebase(config: FirebaseConfig, event: IntegrationEvent): 
     timestamp_micros: event.timestamp * 1000,
     events: [
       {
-        name: `paycat_${event.type}`,
+        name: `mrrcat_${event.type}`,
         params: {
           product_id: event.productId,
           platform: event.platform,
@@ -425,7 +425,7 @@ async function sendToBraze(config: BrazeConfig, event: IntegrationEvent): Promis
     events: [
       {
         external_id: event.appUserId,
-        name: `paycat_${event.type}`,
+        name: `mrrcat_${event.type}`,
         time: new Date(event.timestamp).toISOString(),
         properties: {
           product_id: event.productId,
@@ -468,7 +468,7 @@ async function sendToAppsflyer(config: AppsflyerConfig, event: IntegrationEvent)
   const appsflyerEvent = {
     appsflyer_id: event.appUserId,
     customer_user_id: event.appUserId,
-    eventName: `paycat_${event.type}`,
+    eventName: `mrrcat_${event.type}`,
     eventValue: JSON.stringify({
       product_id: event.productId,
       platform: event.platform,
@@ -521,7 +521,7 @@ async function sendToWebhook(config: WebhookConfig, event: IntegrationEvent): Pr
   if (config.secret) {
     const payload = JSON.stringify(event);
     const signature = await computeHmacSignature(payload, config.secret);
-    headers['X-PayCat-Signature'] = signature;
+    headers['X-MRRCat-Signature'] = signature;
   }
 
   await fetch(config.url, {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * PayCat CLI
- * Command-line interface for managing PayCat instances
+ * MRRCat CLI
+ * Command-line interface for managing MRRCat instances
  */
 
 import { Command } from 'commander';
@@ -10,7 +10,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import Table from 'cli-table3';
 
-const config = new Conf({ projectName: 'paycat-cli' });
+const config = new Conf({ projectName: 'mrrcat-cli' });
 const program = new Command();
 
 // API client helper
@@ -25,7 +25,7 @@ async function apiRequest(
   const adminToken = config.get('adminToken') as string;
 
   if (!baseUrl) {
-    throw new Error('No server configured. Run: paycat config set-server <url>');
+    throw new Error('No server configured. Run: mrrcat config set-server <url>');
   }
 
   const headers: Record<string, string> = {
@@ -34,12 +34,12 @@ async function apiRequest(
 
   if (useAdminAuth) {
     if (!adminToken) {
-      throw new Error('Not logged in. Run: paycat login');
+      throw new Error('Not logged in. Run: mrrcat login');
     }
     headers['Authorization'] = `Bearer ${adminToken}`;
   } else {
     if (!apiKey) {
-      throw new Error('No API key configured. Run: paycat config set-key <key>');
+      throw new Error('No API key configured. Run: mrrcat config set-key <key>');
     }
     headers['X-API-Key'] = apiKey;
   }
@@ -60,8 +60,8 @@ async function apiRequest(
 }
 
 program
-  .name('paycat')
-  .description('PayCat CLI - Unified Payment & Subscription Management')
+  .name('mrrcat')
+  .description('MRRCat CLI - Unified Payment & Subscription Management')
   .version('1.0.0');
 
 // ========== Config Commands ==========
@@ -70,7 +70,7 @@ const configCmd = program.command('config').description('Configure CLI settings'
 
 configCmd
   .command('set-server <url>')
-  .description('Set PayCat server URL')
+  .description('Set MRRCat server URL')
   .action((url: string) => {
     config.set('baseUrl', url.replace(/\/$/, ''));
     console.log(chalk.green(`Server URL set to: ${url}`));
@@ -92,7 +92,7 @@ configCmd
     const apiKey = config.get('apiKey') as string;
     const adminToken = config.get('adminToken') as string;
 
-    console.log(chalk.bold('\nPayCat CLI Configuration:\n'));
+    console.log(chalk.bold('\nMRRCat CLI Configuration:\n'));
     console.log(`Server URL: ${baseUrl || chalk.gray('(not set)')}`);
     console.log(`API Key: ${apiKey ? maskString(apiKey) : chalk.gray('(not set)')}`);
     console.log(`Admin: ${adminToken ? chalk.green('Logged in') : chalk.gray('Not logged in')}`);
@@ -118,7 +118,7 @@ program
     try {
       const baseUrl = config.get('baseUrl') as string;
       if (!baseUrl) {
-        throw new Error('No server configured. Run: paycat config set-server <url>');
+        throw new Error('No server configured. Run: mrrcat config set-server <url>');
       }
 
       const response = await fetch(`${baseUrl}/admin/login`, {
@@ -494,7 +494,7 @@ program
       const data = await apiRequest('GET', '/admin/dashboard', null, true);
       spinner.stop();
 
-      console.log(chalk.bold('\n=== PayCat Dashboard ===\n'));
+      console.log(chalk.bold('\n=== MRRCat Dashboard ===\n'));
       console.log(`Apps: ${chalk.cyan(data.apps)}`);
       console.log(`Total Subscribers: ${chalk.cyan(data.total_subscribers)}`);
       console.log(`Active Subscriptions: ${chalk.green(data.active_subscriptions)}`);

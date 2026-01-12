@@ -175,7 +175,7 @@ async function importPublicKeyFromCert(pem: string): Promise<CryptoKey | null> {
 }
 
 /**
- * Map Amazon notification type to PayCat event type
+ * Map Amazon notification type to MRRCat event type
  */
 export function mapAmazonEventType(
   notificationType: AmazonNotificationType

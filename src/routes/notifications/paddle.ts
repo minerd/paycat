@@ -10,7 +10,7 @@ import {
   parsePaddleWebhook,
   parsePassthrough,
   mapPaddleEventType,
-  mapPaddleStatusToPayCat,
+  mapPaddleStatusToMRRCat,
   extractSubscriptionData,
   extractPaymentData,
 } from '../../services/paddle/webhook';
@@ -72,7 +72,7 @@ paddleNotificationsRouter.post('/', async (c) => {
   const subData = extractSubscriptionData(event);
   const paymentData = extractPaymentData(event);
   const eventType = mapPaddleEventType(event.event_type);
-  const payCatStatus = mapPaddleStatusToPayCat(subData.status);
+  const payCatStatus = mapPaddleStatusToMRRCat(subData.status);
 
   // Determine app_user_id
   const appUserId = passthrough?.app_user_id || subData.email || subData.userId;
