@@ -23,22 +23,20 @@ export default function App() {
     // Check if we need initial setup
     const checkSetup = async () => {
       try {
-        // Try to access dashboard - if it fails with 401, check if setup is needed
         if (api.isAuthenticated()) {
           await api.getMe();
+        } else {
+          // Check setup status via safe endpoint (no side effects)
+          const status = await api.getSetupStatus();
+          setNeedsSetup(status.needs_setup);
         }
       } catch {
-        // If not authenticated, check if setup is needed
+        // If getMe fails, token is invalid - check setup status
         try {
-          await api.setup('test@test.com', 'test1234');
-          // If setup works, we need setup
-          setNeedsSetup(true);
-          api.setToken(null);
-        } catch (e) {
-          // Setup failed - admin exists
-          if ((e as Error).message.includes('already exists')) {
-            setNeedsSetup(false);
-          }
+          const status = await api.getSetupStatus();
+          setNeedsSetup(status.needs_setup);
+        } catch {
+          // Network error or server down
         }
       }
       setLoading(false);

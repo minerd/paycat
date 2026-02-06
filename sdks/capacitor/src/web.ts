@@ -140,6 +140,16 @@ export class MRRCatWeb extends WebPlugin implements MRRCatPlugin {
     return new Promise((resolve) => {
       const identifier = options?.identifier || 'current';
       const locale = options?.locale || 'en';
+      let resolved = false;
+
+      const finish = (result: PaywallPresentResult) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timeoutId);
+        window.removeEventListener('message', messageHandler);
+        this.dismissPaywall();
+        resolve(result);
+      };
 
       // Create overlay
       const overlay = document.createElement('div');
@@ -177,20 +187,16 @@ export class MRRCatWeb extends WebPlugin implements MRRCatPlugin {
       const messageHandler = async (event: MessageEvent) => {
         if (event.origin !== new URL(this.baseUrl).origin) return;
 
-        const { type, data } = event.data;
+        const { type } = event.data;
 
         switch (type) {
           case 'mrrcat:close':
-            this.dismissPaywall();
-            window.removeEventListener('message', messageHandler);
-            resolve({ presented: true, purchased: false, restored: false });
+            finish({ presented: true, purchased: false, restored: false });
             break;
 
           case 'mrrcat:purchase':
-            this.dismissPaywall();
-            window.removeEventListener('message', messageHandler);
             const subscriber = await this.getSubscriberInfo();
-            resolve({
+            finish({
               presented: true,
               purchased: true,
               restored: false,
@@ -199,10 +205,8 @@ export class MRRCatWeb extends WebPlugin implements MRRCatPlugin {
             break;
 
           case 'mrrcat:restore':
-            this.dismissPaywall();
-            window.removeEventListener('message', messageHandler);
             const restoredSubscriber = await this.restorePurchases();
-            resolve({
+            finish({
               presented: true,
               purchased: false,
               restored: true,
@@ -217,11 +221,14 @@ export class MRRCatWeb extends WebPlugin implements MRRCatPlugin {
       // Close on overlay click
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-          this.dismissPaywall();
-          window.removeEventListener('message', messageHandler);
-          resolve({ presented: true, purchased: false, restored: false });
+          finish({ presented: true, purchased: false, restored: false });
         }
       });
+
+      // Timeout fallback: clean up if iframe never responds (5 minutes)
+      const timeoutId = setTimeout(() => {
+        finish({ presented: true, purchased: false, restored: false });
+      }, 5 * 60 * 1000);
 
       overlay.appendChild(iframe);
       document.body.appendChild(overlay);

@@ -60,14 +60,20 @@ export default function Dashboard() {
     );
   }
 
-  const totalRevenue = data?.revenue_30d.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
-  const totalMrr = data?.mrr?.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
-  const totalRefunds = data?.refunds_30d_amount?.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
+  const formatCurrencyAmounts = (amounts: { total: number; currency: string }[]) => {
+    if (!amounts || amounts.length === 0) return '$0.00';
+    return amounts
+      .map((r) => {
+        const symbol = r.currency?.toUpperCase() === 'USD' ? '$' : `${(r.currency || 'USD').toUpperCase()} `;
+        return `${symbol}${((r.total || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      })
+      .join(' + ');
+  };
 
   const stats = [
     {
       name: 'MRR',
-      value: `$${(totalMrr / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      value: formatCurrencyAmounts(data?.mrr || []),
       icon: DollarSign,
       color: 'bg-emerald-500',
     },
@@ -85,13 +91,13 @@ export default function Dashboard() {
     },
     {
       name: 'Revenue (30d)',
-      value: `$${(totalRevenue / 100).toFixed(2)}`,
+      value: formatCurrencyAmounts(data?.revenue_30d || []),
       icon: TrendingUp,
       color: 'bg-orange-500',
     },
     {
       name: 'Refunds (30d)',
-      value: `${data?.refunds_30d_count || 0} ($${(totalRefunds / 100).toFixed(2)})`,
+      value: `${data?.refunds_30d_count || 0} (${formatCurrencyAmounts(data?.refunds_30d_amount || [])})`,
       icon: RotateCcw,
       color: 'bg-red-500',
     },

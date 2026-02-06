@@ -491,8 +491,19 @@ function PlatformCard({
   configured: boolean;
   details: { label: string; value: string }[];
   onConfigure: () => void;
-  onRemove: () => void;
+  onRemove: () => void | Promise<void>;
 }) {
+  const [removing, setRemoving] = useState(false);
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await onRemove();
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -524,10 +535,11 @@ function PlatformCard({
               Update
             </button>
             <button
-              onClick={onRemove}
-              className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+              onClick={handleRemove}
+              disabled={removing}
+              className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50"
             >
-              Remove
+              {removing ? 'Removing...' : 'Remove'}
             </button>
           </div>
         </>

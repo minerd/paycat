@@ -46,6 +46,15 @@ adminRouter.post('/login', async (c) => {
 });
 
 /**
+ * GET /admin/setup/status
+ * Check if initial setup is needed (no admin exists)
+ */
+adminRouter.get('/setup/status', async (c) => {
+  const existing = await c.env.DB.prepare('SELECT id FROM admin_users LIMIT 1').first();
+  return c.json({ needs_setup: !existing });
+});
+
+/**
  * POST /admin/setup
  * Initial admin setup (only works if no admin exists)
  */
@@ -669,6 +678,15 @@ adminRouter.post('/apps/:id/webhooks', async (c) => {
 adminRouter.delete('/webhooks/:id', async (c) => {
   const { id } = c.req.param();
 
+  // Verify webhook exists and belongs to an app in the system
+  const webhook = await c.env.DB.prepare('SELECT id, app_id FROM webhooks WHERE id = ?')
+    .bind(id)
+    .first();
+
+  if (!webhook) {
+    throw Errors.notFound('Webhook');
+  }
+
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM webhook_deliveries WHERE webhook_id = ?').bind(id),
     c.env.DB.prepare('DELETE FROM webhooks WHERE id = ?').bind(id),
@@ -870,6 +888,7 @@ adminRouter.get('/subscribers/:id', async (c) => {
 adminRouter.use('/stream', adminAuthMiddleware);
 adminRouter.get('/stream', async (c) => {
   const encoder = new TextEncoder();
+  const abortSignal = c.req.raw.signal;
 
   // Create a readable stream for SSE
   const stream = new ReadableStream({
@@ -884,6 +903,12 @@ adminRouter.get('/stream', async (c) => {
       // Poll for updates every 5 seconds
       let running = true;
       let lastCheck = Date.now();
+
+      // Stop polling when client disconnects
+      abortSignal.addEventListener('abort', () => {
+        running = false;
+        try { controller.close(); } catch { /* already closed */ }
+      });
 
       const poll = async () => {
         if (!running) return;
@@ -983,6 +1008,7 @@ adminRouter.use('/stream/app/*', adminAuthMiddleware);
 adminRouter.get('/stream/app/:id', async (c) => {
   const appId = c.req.param('id');
   const encoder = new TextEncoder();
+  const abortSignal = c.req.raw.signal;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -993,9 +1019,17 @@ adminRouter.get('/stream/app/:id', async (c) => {
       });
       controller.enqueue(encoder.encode(`data: ${initialData}\n\n`));
 
+      let running = true;
       let lastCheck = Date.now();
 
+      // Stop polling when client disconnects
+      abortSignal.addEventListener('abort', () => {
+        running = false;
+        try { controller.close(); } catch { /* already closed */ }
+      });
+
       const poll = async () => {
+        if (!running) return;
         try {
           // Get app-specific recent events
           const recentEvents = await c.env.DB.prepare(

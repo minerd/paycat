@@ -220,25 +220,29 @@ webhooksRouter.patch('/:id', async (c) => {
 
   // Get updated webhook
   const updated = await c.env.DB.prepare(
-    'SELECT id, url, events, active, created_at FROM webhooks WHERE id = ?'
+    'SELECT id, url, events, active, created_at FROM webhooks WHERE id = ? AND app_id = ?'
   )
-    .bind(id)
+    .bind(id, app.id)
     .first();
+
+  if (!updated) {
+    throw Errors.notFound('Webhook');
+  }
 
   let updatedEvents: string[] = [];
   try {
-    updatedEvents = JSON.parse(updated!.events as string);
+    updatedEvents = JSON.parse(updated.events as string);
   } catch {
     updatedEvents = ['*'];
   }
 
   return c.json({
     webhook: {
-      id: updated!.id,
-      url: updated!.url,
+      id: updated.id,
+      url: updated.url,
       events: updatedEvents,
-      active: !!updated!.active,
-      created_at: toISOString(updated!.created_at as number),
+      active: !!updated.active,
+      created_at: toISOString(updated.created_at as number),
     },
   });
 });

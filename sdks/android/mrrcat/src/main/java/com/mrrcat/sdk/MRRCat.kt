@@ -87,6 +87,10 @@ class MRRCat private constructor(
     // Listeners
     private val listeners = mutableListOf<MRRCatListener>()
 
+    // Billing connection retry state
+    private var retryAttempt = 0
+    private val maxRetryAttempts = 5
+
     /**
      * Current app user ID
      */
@@ -119,6 +123,7 @@ class MRRCat private constructor(
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     _connectionState.value = ConnectionState.CONNECTED
+                    retryAttempt = 0
                     scope.launch { syncExistingPurchases() }
                 } else {
                     _connectionState.value = ConnectionState.DISCONNECTED
@@ -128,10 +133,14 @@ class MRRCat private constructor(
 
             override fun onBillingServiceDisconnected() {
                 _connectionState.value = ConnectionState.DISCONNECTED
-                // Retry connection
-                scope.launch {
-                    delay(1000)
-                    startConnection()
+                // Retry with exponential backoff (max 5 attempts)
+                if (retryAttempt < maxRetryAttempts) {
+                    val delayMs = (1000L * (1 shl retryAttempt)).coerceAtMost(30_000L)
+                    retryAttempt++
+                    scope.launch {
+                        delay(delayMs)
+                        startConnection()
+                    }
                 }
             }
         })

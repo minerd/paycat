@@ -59,7 +59,23 @@ export async function handleScheduled(
 async function expireGracePeriods(db: D1Database): Promise<{ expired: number }> {
   const now = Date.now();
 
-  const result = await db
+  // Find subscriptions to expire BEFORE updating
+  const toExpire = await db
+    .prepare(
+      `SELECT id, app_id, subscriber_id, product_id, platform
+       FROM subscriptions
+       WHERE status = 'grace_period'
+       AND grace_period_expires_at IS NOT NULL
+       AND grace_period_expires_at < ?`
+    )
+    .bind(now)
+    .all<{ id: string; app_id: string; subscriber_id: string; product_id: string; platform: string }>();
+
+  const subs = toExpire.results || [];
+  if (subs.length === 0) return { expired: 0 };
+
+  // Update status
+  await db
     .prepare(
       `UPDATE subscriptions
        SET status = 'expired', updated_at = ?
@@ -70,40 +86,26 @@ async function expireGracePeriods(db: D1Database): Promise<{ expired: number }> 
     .bind(now, now)
     .run();
 
-  const expired = result.meta.changes || 0;
-
-  if (expired > 0) {
-    // Log analytics events for expired grace periods
-    const expiredSubs = await db
+  // Log analytics events for the pre-fetched subscriptions
+  for (const sub of subs) {
+    await db
       .prepare(
-        `SELECT id, app_id, subscriber_id, product_id, platform
-         FROM subscriptions
-         WHERE status = 'expired'
-         AND updated_at = ?`
+        `INSERT INTO analytics_events (id, app_id, subscriber_id, event_type, event_date, product_id, platform, created_at)
+         VALUES (?, ?, ?, 'grace_period_expired', ?, ?, ?, ?)`
       )
-      .bind(now)
-      .all<{ id: string; app_id: string; subscriber_id: string; product_id: string; platform: string }>();
-
-    for (const sub of expiredSubs.results || []) {
-      await db
-        .prepare(
-          `INSERT INTO analytics_events (id, app_id, subscriber_id, event_type, event_date, product_id, platform, created_at)
-           VALUES (?, ?, ?, 'grace_period_expired', ?, ?, ?, ?)`
-        )
-        .bind(
-          crypto.randomUUID(),
-          sub.app_id,
-          sub.subscriber_id,
-          now,
-          sub.product_id,
-          sub.platform,
-          now
-        )
-        .run();
-    }
+      .bind(
+        crypto.randomUUID(),
+        sub.app_id,
+        sub.subscriber_id,
+        now,
+        sub.product_id,
+        sub.platform,
+        now
+      )
+      .run();
   }
 
-  return { expired };
+  return { expired: subs.length };
 }
 
 /**
@@ -202,8 +204,24 @@ async function expireTrials(db: D1Database): Promise<{ expired: number; converte
 async function expireSubscriptions(db: D1Database): Promise<{ expired: number }> {
   const now = Date.now();
 
-  // Only expire subscriptions that won't renew
-  const result = await db
+  // Find subscriptions to expire BEFORE updating
+  const toExpire = await db
+    .prepare(
+      `SELECT id, app_id, subscriber_id, product_id, platform
+       FROM subscriptions
+       WHERE status = 'active'
+       AND will_renew = 0
+       AND expires_at IS NOT NULL
+       AND expires_at < ?`
+    )
+    .bind(now)
+    .all<{ id: string; app_id: string; subscriber_id: string; product_id: string; platform: string }>();
+
+  const subs = toExpire.results || [];
+  if (subs.length === 0) return { expired: 0 };
+
+  // Update status
+  await db
     .prepare(
       `UPDATE subscriptions
        SET status = 'expired', updated_at = ?
@@ -215,41 +233,26 @@ async function expireSubscriptions(db: D1Database): Promise<{ expired: number }>
     .bind(now, now)
     .run();
 
-  const expired = result.meta.changes || 0;
-
-  if (expired > 0) {
-    // Log analytics events
-    const expiredSubs = await db
+  // Log analytics events for the pre-fetched subscriptions
+  for (const sub of subs) {
+    await db
       .prepare(
-        `SELECT id, app_id, subscriber_id, product_id, platform
-         FROM subscriptions
-         WHERE status = 'expired'
-         AND will_renew = 0
-         AND updated_at = ?`
+        `INSERT INTO analytics_events (id, app_id, subscriber_id, event_type, event_date, product_id, platform, created_at)
+         VALUES (?, ?, ?, 'expiration', ?, ?, ?, ?)`
       )
-      .bind(now)
-      .all<{ id: string; app_id: string; subscriber_id: string; product_id: string; platform: string }>();
-
-    for (const sub of expiredSubs.results || []) {
-      await db
-        .prepare(
-          `INSERT INTO analytics_events (id, app_id, subscriber_id, event_type, event_date, product_id, platform, created_at)
-           VALUES (?, ?, ?, 'expiration', ?, ?, ?, ?)`
-        )
-        .bind(
-          crypto.randomUUID(),
-          sub.app_id,
-          sub.subscriber_id,
-          now,
-          sub.product_id,
-          sub.platform,
-          now
-        )
-        .run();
-    }
+      .bind(
+        crypto.randomUUID(),
+        sub.app_id,
+        sub.subscriber_id,
+        now,
+        sub.product_id,
+        sub.platform,
+        now
+      )
+      .run();
   }
 
-  return { expired };
+  return { expired: subs.length };
 }
 
 /**

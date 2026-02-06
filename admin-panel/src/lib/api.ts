@@ -59,6 +59,11 @@ class ApiClient {
     return data;
   }
 
+  // Setup status (no auth required)
+  async getSetupStatus() {
+    return this.request<{ needs_setup: boolean }>('/setup/status');
+  }
+
   // Auth
   async login(email: string, password: string) {
     const data = await this.request<{ token: string; user: { id: string; email: string } }>(
