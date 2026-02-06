@@ -165,7 +165,23 @@ export async function getOrCreateSubscriber(
   let subscriber = await getSubscriberByAppUserId(db, appId, appUserId);
 
   if (!subscriber) {
-    subscriber = await createSubscriber(db, appId, appUserId);
+    // Use INSERT OR IGNORE to handle race conditions with concurrent requests
+    const id = generatePrefixedId('sub');
+    const timestamp = now();
+    await db
+      .prepare(
+        `INSERT OR IGNORE INTO subscribers
+         (id, app_id, app_user_id, first_seen_at, last_seen_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .bind(id, appId, appUserId, timestamp, timestamp, timestamp)
+      .run();
+
+    // Re-fetch to get the actual record (may have been created by concurrent request)
+    subscriber = await getSubscriberByAppUserId(db, appId, appUserId);
+    if (!subscriber) {
+      throw new Error('Failed to create or find subscriber');
+    }
   } else {
     // Update last_seen_at
     await db
@@ -280,7 +296,7 @@ export async function createSubscription(
       data.isTrial ? 1 : 0,
       data.isIntroOffer ? 1 : 0,
       data.isSandbox ? 1 : 0,
-      data.willRenew !== false ? 1 : 0,
+      data.willRenew ? 1 : 0,
       data.priceAmount || null,
       data.priceCurrency || null,
       timestamp,
@@ -305,7 +321,7 @@ export async function createSubscription(
     is_trial: data.isTrial || false,
     is_intro_offer: data.isIntroOffer || false,
     is_sandbox: data.isSandbox || false,
-    will_renew: data.willRenew !== false,
+    will_renew: !!data.willRenew,
     price_amount: data.priceAmount || null,
     price_currency: data.priceCurrency || null,
     created_at: timestamp,
@@ -324,6 +340,7 @@ export async function updateSubscription(
     willRenew: boolean;
     priceAmount: number;
     priceCurrency: string;
+    isSandbox: boolean;
   }>
 ): Promise<void> {
   const updates: string[] = ['updated_at = ?'];
@@ -356,6 +373,10 @@ export async function updateSubscription(
   if (data.priceCurrency !== undefined) {
     updates.push('price_currency = ?');
     values.push(data.priceCurrency);
+  }
+  if (data.isSandbox !== undefined) {
+    updates.push('is_sandbox = ?');
+    values.push(data.isSandbox ? 1 : 0);
   }
 
   values.push(id);
@@ -686,13 +707,15 @@ export async function createAnalyticsEvent(
 
 export async function getActiveSubscribersCount(
   db: D1Database,
-  appId: string
+  appId: string,
+  excludeSandbox: boolean = false
 ): Promise<number> {
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
   const result = await db
     .prepare(
       `SELECT COUNT(DISTINCT subscriber_id) as count
        FROM subscriptions
-       WHERE app_id = ? AND status = 'active'`
+       WHERE app_id = ? AND status = 'active'${sandboxFilter}`
     )
     .bind(appId)
     .first<{ count: number }>();
@@ -701,13 +724,15 @@ export async function getActiveSubscribersCount(
 
 export async function getActiveTrialsCount(
   db: D1Database,
-  appId: string
+  appId: string,
+  excludeSandbox: boolean = false
 ): Promise<number> {
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
   const result = await db
     .prepare(
       `SELECT COUNT(*) as count
        FROM subscriptions
-       WHERE app_id = ? AND status = 'active' AND is_trial = 1`
+       WHERE app_id = ? AND status = 'active' AND is_trial = 1${sandboxFilter}`
     )
     .bind(appId)
     .first<{ count: number }>();
@@ -716,13 +741,15 @@ export async function getActiveTrialsCount(
 
 export async function getMRR(
   db: D1Database,
-  appId: string
+  appId: string,
+  excludeSandbox: boolean = false
 ): Promise<number> {
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
   const result = await db
     .prepare(
       `SELECT SUM(price_amount) as total
        FROM subscriptions
-       WHERE app_id = ? AND status = 'active' AND price_amount IS NOT NULL`
+       WHERE app_id = ? AND status = 'active' AND price_amount IS NOT NULL${sandboxFilter}`
     )
     .bind(appId)
     .first<{ total: number | null }>();
@@ -733,14 +760,19 @@ export async function getRevenueByPlatform(
   db: D1Database,
   appId: string,
   startDate: number,
-  endDate: number
+  endDate: number,
+  excludeSandbox: boolean = false
 ): Promise<Record<Platform, number>> {
+  // Join with subscriptions to filter sandbox
+  const sandboxJoin = excludeSandbox
+    ? ' JOIN subscriptions s ON s.id = t.subscription_id AND s.is_sandbox = 0'
+    : '';
   const result = await db
     .prepare(
-      `SELECT platform, SUM(revenue_amount) as total
-       FROM transactions
-       WHERE app_id = ? AND purchase_date >= ? AND purchase_date <= ? AND is_refunded = 0
-       GROUP BY platform`
+      `SELECT t.platform, SUM(t.revenue_amount) as total
+       FROM transactions t${sandboxJoin}
+       WHERE t.app_id = ? AND t.purchase_date >= ? AND t.purchase_date <= ? AND t.is_refunded = 0
+       GROUP BY t.platform`
     )
     .bind(appId, startDate, endDate)
     .all<{ platform: Platform; total: number }>();
@@ -755,10 +787,12 @@ export async function getRevenueByPlatform(
 export async function getChurnRate(
   db: D1Database,
   appId: string,
-  periodDays: number = 30
+  periodDays: number = 30,
+  excludeSandbox: boolean = false
 ): Promise<number> {
   const endDate = now();
   const startDate = endDate - periodDays * 24 * 60 * 60 * 1000;
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
 
   // Churned subscribers (cancelled or expired in period)
   const churned = await db
@@ -766,9 +800,9 @@ export async function getChurnRate(
       `SELECT COUNT(DISTINCT subscriber_id) as count
        FROM subscriptions
        WHERE app_id = ?
-         AND (cancelled_at >= ? OR (expires_at >= ? AND expires_at <= ? AND status = 'expired'))`
+         AND ((cancelled_at >= ? AND cancelled_at <= ?) OR (expires_at >= ? AND expires_at <= ? AND status = 'expired'))${sandboxFilter}`
     )
-    .bind(appId, startDate, startDate, endDate)
+    .bind(appId, startDate, endDate, startDate, endDate)
     .first<{ count: number }>();
 
   // Active at start of period
@@ -778,7 +812,7 @@ export async function getChurnRate(
        FROM subscriptions
        WHERE app_id = ?
          AND purchase_date < ?
-         AND (expires_at > ? OR status = 'active')`
+         AND (expires_at > ? OR status = 'active')${sandboxFilter}`
     )
     .bind(appId, startDate, startDate)
     .first<{ count: number }>();
@@ -787,4 +821,69 @@ export async function getChurnRate(
   const activeCount = activeAtStart?.count || 1;
 
   return (churnedCount / activeCount) * 100;
+}
+
+// ===========================================
+// Notification Idempotency
+// ===========================================
+
+/**
+ * Check if notification was already processed
+ */
+export async function isNotificationProcessed(
+  db: D1Database,
+  appId: string,
+  platform: string,
+  notificationId: string
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `SELECT 1 FROM processed_notifications
+       WHERE app_id = ? AND platform = ? AND notification_id = ?`
+    )
+    .bind(appId, platform, notificationId)
+    .first();
+
+  return result !== null;
+}
+
+/**
+ * Mark notification as processed
+ */
+export async function markNotificationProcessed(
+  db: D1Database,
+  appId: string,
+  platform: string,
+  notificationId: string,
+  notificationType?: string
+): Promise<void> {
+  const id = `pn_${crypto.randomUUID().replace(/-/g, '')}`;
+
+  await db
+    .prepare(
+      `INSERT OR IGNORE INTO processed_notifications
+       (id, app_id, notification_id, platform, notification_type, processed_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .bind(id, appId, notificationId, platform, notificationType || null, now())
+    .run();
+}
+
+/**
+ * Cleanup old processed notifications (older than 7 days)
+ */
+export async function cleanupProcessedNotifications(
+  db: D1Database,
+  maxAgeDays: number = 7
+): Promise<number> {
+  const cutoff = now() - maxAgeDays * 24 * 60 * 60 * 1000;
+
+  const result = await db
+    .prepare(
+      `DELETE FROM processed_notifications WHERE processed_at < ?`
+    )
+    .bind(cutoff)
+    .run();
+
+  return result.meta.changes || 0;
 }

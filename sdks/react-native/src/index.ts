@@ -3,7 +3,7 @@
  * Unified subscription management across iOS, Android, and Web
  */
 
-import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
+import { Platform as RNPlatform, NativeModules, NativeEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types
@@ -406,19 +406,27 @@ class MRRCatSDK {
 
       // Wait for purchase to complete via listener
       return new Promise((resolve, reject) => {
+        let unsubscribe: (() => void) | null = null;
+        let errorUnsubscribe: (() => void) | null = null;
+
+        const cleanup = () => {
+          clearTimeout(timeout);
+          unsubscribe?.();
+          errorUnsubscribe?.();
+        };
+
         const timeout = setTimeout(() => {
+          cleanup();
           reject(new MRRCatError('purchase_timeout', 'Purchase timed out'));
         }, 60000);
 
-        const unsubscribe = this.on('subscriberInfoUpdated', (event) => {
-          clearTimeout(timeout);
-          unsubscribe();
+        unsubscribe = this.on('subscriberInfoUpdated', (event) => {
+          cleanup();
           resolve(event.data as SubscriberInfo);
         });
 
-        const errorUnsubscribe = this.on('purchaseFailed', (event) => {
-          clearTimeout(timeout);
-          errorUnsubscribe();
+        errorUnsubscribe = this.on('purchaseFailed', (event) => {
+          cleanup();
           reject(event.data);
         });
       });
@@ -449,6 +457,23 @@ class MRRCatSDK {
       return this.getSubscriberInfo(true);
     } catch (e: any) {
       throw new MRRCatError('restore_failed', e.message || 'Restore failed');
+    }
+  }
+
+  /**
+   * Open platform's native subscription management page
+   * iOS: Opens App Store subscription management
+   * Android: Opens Google Play subscription management
+   */
+  async manageSubscriptions(): Promise<void> {
+    const { Linking } = require('react-native');
+
+    if (RNPlatform.OS === 'ios') {
+      // iOS App Store subscription management URL
+      await Linking.openURL('https://apps.apple.com/account/subscriptions');
+    } else if (RNPlatform.OS === 'android') {
+      // Google Play subscription management URL
+      await Linking.openURL('https://play.google.com/store/account/subscriptions');
     }
   }
 
@@ -560,7 +585,7 @@ class MRRCatSDK {
 
       // Acknowledge/finish the purchase
       if (this.iapModule) {
-        if (Platform.OS === 'ios') {
+        if (RNPlatform.OS === 'ios') {
           await this.iapModule.finishTransaction({ purchase });
         } else {
           await this.iapModule.acknowledgePurchaseAndroid({
@@ -584,7 +609,7 @@ class MRRCatSDK {
    * Sync purchase to MRRCat backend
    */
   private async syncPurchase(purchase: any): Promise<void> {
-    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    const platform = RNPlatform.OS === 'ios' ? 'ios' : 'android';
 
     const body: any = {
       app_user_id: this.appUserID,
@@ -594,7 +619,7 @@ class MRRCatSDK {
       },
     };
 
-    if (Platform.OS === 'ios') {
+    if (RNPlatform.OS === 'ios') {
       body.receipt_data.transaction_id = purchase.transactionId;
     } else {
       body.receipt_data.purchase_token = purchase.purchaseToken;
@@ -664,7 +689,7 @@ class MRRCatSDK {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': this.apiKey,
-      'User-Agent': `MRRCat-ReactNative/1.0.0 ${Platform.OS}`,
+      'User-Agent': `MRRCat-ReactNative/1.0.0 ${RNPlatform.OS}`,
     };
 
     const options: RequestInit = {

@@ -225,8 +225,8 @@ adminRouter.get('/apps/:id', async (c) => {
 adminRouter.post('/apps', async (c) => {
   const body = await c.req.json<{ name: string }>();
 
-  if (!body.name) {
-    throw Errors.validationError('App name is required');
+  if (!body.name || body.name.length > 255) {
+    throw Errors.validationError('App name is required and must be 255 characters or less');
   }
 
   const id = generateId();
@@ -477,52 +477,78 @@ adminRouter.delete('/apps/:id/stripe', async (c) => {
 /**
  * GET /admin/dashboard
  * Get overall dashboard statistics
+ * Query params:
+ *   - exclude_sandbox: If "true", exclude sandbox/test data
  */
 adminRouter.get('/dashboard', async (c) => {
   const now = Date.now();
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
 
   // Get counts
   const [appsCount, subscribersCount, activeSubsCount, revenueResult, mrrResult] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) as count FROM apps').first<{ count: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as count FROM subscribers').first<{ count: number }>(),
-    c.env.DB.prepare("SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'").first<{ count: number }>(),
-    c.env.DB.prepare(
-      `SELECT SUM(revenue_amount) as total, revenue_currency as currency
-       FROM transactions
-       WHERE created_at > ? AND is_refunded = 0
-       GROUP BY revenue_currency`
-    )
-      .bind(thirtyDaysAgo)
-      .all<{ total: number; currency: string }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'${sandboxFilter}`).first<{ count: number }>(),
+    // Revenue: join with subscriptions for sandbox filter
+    excludeSandbox
+      ? c.env.DB.prepare(
+          `SELECT SUM(t.revenue_amount) as total, t.revenue_currency as currency
+           FROM transactions t
+           JOIN subscriptions s ON s.id = t.subscription_id AND s.is_sandbox = 0
+           WHERE t.created_at > ? AND t.is_refunded = 0
+           GROUP BY t.revenue_currency`
+        )
+          .bind(thirtyDaysAgo)
+          .all<{ total: number; currency: string }>()
+      : c.env.DB.prepare(
+          `SELECT SUM(revenue_amount) as total, revenue_currency as currency
+           FROM transactions
+           WHERE created_at > ? AND is_refunded = 0
+           GROUP BY revenue_currency`
+        )
+          .bind(thirtyDaysAgo)
+          .all<{ total: number; currency: string }>(),
     // MRR: Sum of active subscription prices (assuming monthly)
     c.env.DB.prepare(
       `SELECT SUM(price_amount) as total, price_currency as currency
        FROM subscriptions
-       WHERE status = 'active' AND price_amount IS NOT NULL
+       WHERE status = 'active' AND price_amount IS NOT NULL${sandboxFilter}
        GROUP BY price_currency`
     ).all<{ total: number; currency: string }>(),
   ]);
 
-  // Get recent events
-  const recentEvents = await c.env.DB.prepare(
-    `SELECT event_type, COUNT(*) as count
-     FROM analytics_events
-     WHERE created_at > ?
-     GROUP BY event_type`
-  )
-    .bind(thirtyDaysAgo)
-    .all<{ event_type: string; count: number }>();
+  // Get recent events (join with subscriptions for sandbox filter)
+  const recentEvents = excludeSandbox
+    ? await c.env.DB.prepare(
+        `SELECT ae.event_type, COUNT(*) as count
+         FROM analytics_events ae
+         JOIN subscriptions s ON s.subscriber_id = ae.subscriber_id AND s.is_sandbox = 0
+         WHERE ae.created_at > ?
+         GROUP BY ae.event_type`
+      )
+        .bind(thirtyDaysAgo)
+        .all<{ event_type: string; count: number }>()
+    : await c.env.DB.prepare(
+        `SELECT event_type, COUNT(*) as count
+         FROM analytics_events
+         WHERE created_at > ?
+         GROUP BY event_type`
+      )
+        .bind(thirtyDaysAgo)
+        .all<{ event_type: string; count: number }>();
 
   // Platform breakdown
   const platformBreakdown = await c.env.DB.prepare(
     `SELECT platform, COUNT(*) as count
      FROM subscriptions
-     WHERE status = 'active'
+     WHERE status = 'active'${sandboxFilter}
      GROUP BY platform`
   ).all<{ platform: string; count: number }>();
 
   return c.json({
+    exclude_sandbox: excludeSandbox,
     apps: appsCount?.count || 0,
     total_subscribers: subscribersCount?.count || 0,
     active_subscriptions: activeSubsCount?.count || 0,
@@ -568,10 +594,14 @@ adminRouter.post('/apps/:id/webhooks', async (c) => {
     throw Errors.validationError('url and events are required');
   }
 
-  // Validate URL
+  // Validate URL and enforce HTTPS
   try {
-    new URL(body.url);
-  } catch {
+    const parsed = new URL(body.url);
+    if (parsed.protocol !== 'https:') {
+      throw Errors.validationError('Webhook URL must use HTTPS');
+    }
+  } catch (e) {
+    if (e instanceof Error && 'code' in e) throw e;
     throw Errors.validationError('Invalid webhook URL');
   }
 
@@ -867,7 +897,7 @@ adminRouter.get('/stream', async (c) => {
               transactions: recentTransactions.results || [],
               stats: {
                 active_subscriptions: activeCount?.count || 0,
-                mrr: ((mrrResult?.total || 0) / 100).toFixed(2),
+                mrr: Math.round(((mrrResult?.total || 0) / 100) * 100) / 100,
               },
             });
             controller.enqueue(encoder.encode(`data: ${eventData}\n\n`));
@@ -878,7 +908,7 @@ adminRouter.get('/stream', async (c) => {
               timestamp: lastCheck,
               stats: {
                 active_subscriptions: activeCount?.count || 0,
-                mrr: ((mrrResult?.total || 0) / 100).toFixed(2),
+                mrr: Math.round(((mrrResult?.total || 0) / 100) * 100) / 100,
               },
             });
             controller.enqueue(encoder.encode(`data: ${heartbeat}\n\n`));
@@ -984,7 +1014,7 @@ adminRouter.get('/stream/app/:id', async (c) => {
             stats: {
               active_subscriptions: activeCount?.count || 0,
               total_subscribers: subscriberCount?.count || 0,
-              mrr: ((mrrResult?.total || 0) / 100).toFixed(2),
+              mrr: Math.round(((mrrResult?.total || 0) / 100) * 100) / 100,
             },
           });
           controller.enqueue(encoder.encode(`data: ${eventData}\n\n`));

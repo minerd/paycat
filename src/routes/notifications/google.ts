@@ -6,11 +6,10 @@
 import { Hono } from 'hono';
 import type { Env, EventType, GoogleConfig } from '../../types';
 import {
-  parseGoogleNotification,
+  verifyGooglePubSubMessage,
   mapGoogleNotificationToEventType,
   getGoogleSubscriptionStatus,
   shouldTriggerGoogleWebhook,
-  validateGooglePubSubMessage,
 } from '../../services/google/notification';
 import { createGoogleClient } from '../../services/google/client';
 import { mapGoogleSubscriptionState } from '../../services/google/types';
@@ -22,6 +21,8 @@ import {
   getSubscriberById,
   getOrCreateSubscriber,
   createSubscription,
+  isNotificationProcessed,
+  markNotificationProcessed,
 } from '../../db/queries';
 import { dispatchWebhook, createWebhookPayload } from '../../services/webhook-dispatcher';
 import { calculateEntitlements } from '../../services/entitlement';
@@ -90,13 +91,23 @@ googleNotificationsRouter.post('/', async (c) => {
       return c.json({ error: 'Invalid Pub/Sub message' }, 400);
     }
 
-    // Validate message
-    if (!validateGooglePubSubMessage(body.message)) {
-      return c.json({ error: 'Invalid message format' }, 400);
-    }
+    // Get authorization header for JWT verification
+    const authHeader = c.req.header('Authorization') || null;
 
-    // Parse notification
-    const notification = parseGoogleNotification(body.message.data);
+    // Get the expected audience (our webhook URL)
+    const expectedAudience = new URL(c.req.url).origin + '/v1/notifications/google';
+
+    // Verify and parse notification with JWT verification
+    const notification = await verifyGooglePubSubMessage(
+      authHeader,
+      expectedAudience,
+      body.message
+    );
+
+    // Log verification status
+    if (!notification.verified) {
+      console.warn('Google notification received without JWT verification');
+    }
 
     // Skip test notifications
     if (notification.type === 'test') {
@@ -121,6 +132,20 @@ googleNotificationsRouter.post('/', async (c) => {
     if (!app) {
       console.error('App not found for package:', notification.packageName);
       return c.json({ received: true });
+    }
+
+    // Idempotency check - use Pub/Sub messageId
+    const messageId = body.message.messageId;
+    const alreadyProcessed = await isNotificationProcessed(
+      c.env.DB,
+      app.id,
+      'android',
+      messageId
+    );
+
+    if (alreadyProcessed) {
+      console.log('Google notification already processed:', messageId);
+      return c.json({ received: true, duplicate: true });
     }
 
     // Find subscription
@@ -196,17 +221,20 @@ googleNotificationsRouter.post('/', async (c) => {
       : 'unknown';
     const eventType = toEventType(eventTypeStr);
 
+    const isSandbox = googleSubscription?.testPurchase ? true : subscription.is_sandbox;
+
     await updateSubscription(c.env.DB, subscription.id, {
       status,
       expiresAt,
       willRenew,
+      isSandbox: !!isSandbox,
     });
 
     // Log transaction
     await createTransaction(c.env.DB, {
       subscriptionId: subscription.id,
       appId: app.id,
-      transactionId: `google_${notification.eventTimeMillis}`,
+      transactionId: `google_${messageId}_${notification.eventTimeMillis}`,
       productId: notification.subscriptionId || subscription.product_id,
       platform: 'android',
       type: mapEventToTransactionType(eventTypeStr),
@@ -266,6 +294,15 @@ googleNotificationsRouter.post('/', async (c) => {
         }
       }
     }
+
+    // Mark notification as processed (idempotency)
+    await markNotificationProcessed(
+      c.env.DB,
+      app.id,
+      'android',
+      messageId,
+      notification.notificationType?.toString()
+    );
 
     console.log(
       `Processed Google notification: type=${notification.notificationType}`,

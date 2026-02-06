@@ -290,11 +290,14 @@ class MRRCat private constructor(
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
             // Sync with MRRCat backend
             try {
+                val productId = purchase.products.firstOrNull()
+                    ?: throw MRRCatException.BillingError("Purchase has no associated products")
+
                 apiClient.verifyReceipt(
                     appUserID = appUserID,
                     platform = "android",
                     purchaseToken = purchase.purchaseToken,
-                    productId = purchase.products.first()
+                    productId = productId
                 )
 
                 // Acknowledge purchase if not already
@@ -335,6 +338,55 @@ class MRRCat private constructor(
             if (_connectionState.value != ConnectionState.CONNECTED) {
                 throw MRRCatException.NotConnected()
             }
+        }
+    }
+
+    // MARK: - Subscription Management
+
+    /**
+     * Open Google Play subscription management page
+     */
+    fun manageSubscriptions(activity: Activity) {
+        val intent = android.content.Intent(
+            android.content.Intent.ACTION_VIEW,
+            android.net.Uri.parse("https://play.google.com/store/account/subscriptions")
+        )
+        intent.setPackage("com.android.vending")
+        try {
+            activity.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            // Fallback to browser if Play Store not available
+            val browserIntent = android.content.Intent(
+                android.content.Intent.ACTION_VIEW,
+                android.net.Uri.parse("https://play.google.com/store/account/subscriptions")
+            )
+            activity.startActivity(browserIntent)
+        }
+    }
+
+    /**
+     * Open Google Play subscription management for a specific subscription
+     */
+    fun manageSubscription(activity: Activity, productId: String) {
+        val packageName = context.packageName
+        val intent = android.content.Intent(
+            android.content.Intent.ACTION_VIEW,
+            android.net.Uri.parse(
+                "https://play.google.com/store/account/subscriptions?sku=$productId&package=$packageName"
+            )
+        )
+        intent.setPackage("com.android.vending")
+        try {
+            activity.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            // Fallback to browser
+            val browserIntent = android.content.Intent(
+                android.content.Intent.ACTION_VIEW,
+                android.net.Uri.parse(
+                    "https://play.google.com/store/account/subscriptions?sku=$productId&package=$packageName"
+                )
+            )
+            activity.startActivity(browserIntent)
         }
     }
 

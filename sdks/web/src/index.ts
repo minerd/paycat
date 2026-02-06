@@ -320,6 +320,15 @@ export class MRRCat {
     return `${this.baseURL}/v1/subscribers/${this.appUserID}/manage`;
   }
 
+  /**
+   * Open subscription management page
+   * For web, this opens Stripe Customer Portal in a new tab
+   */
+  async manageSubscriptions(): Promise<void> {
+    const url = this.getManagementURL();
+    window.open(url, '_blank');
+  }
+
   // Offerings
   private offeringsCache: Offerings | null = null;
   private offeringsCacheExpiry: Date | null = null;
@@ -447,6 +456,8 @@ export class MRRCat {
     this.paywallContainer.appendChild(this.paywallIframe);
     document.body.appendChild(this.paywallContainer);
 
+    // Remove any existing listener before adding a new one to prevent duplicates
+    window.removeEventListener('message', this.handlePaywallMessage);
     // Listen for messages from iframe
     window.addEventListener('message', this.handlePaywallMessage);
 
@@ -510,15 +521,16 @@ export class MRRCat {
     if (!event.data?.type?.startsWith('mrrcat_')) return;
 
     const { type, packageId, eventType, data } = event.data;
+    const templateId = this.paywallOptions?.templateIdentifier || 'current';
 
     switch (type) {
       case 'mrrcat_purchase':
         if (this.paywallOptions?.onPurchase && packageId) {
           try {
             await this.paywallOptions.onPurchase(packageId);
-            this.trackPaywallEvent('purchase_completed', 'current', packageId);
+            this.trackPaywallEvent('purchase_completed', templateId, packageId);
           } catch (error) {
-            this.trackPaywallEvent('purchase_failed', 'current', packageId);
+            this.trackPaywallEvent('purchase_failed', templateId, packageId);
           }
         }
         break;
@@ -531,19 +543,19 @@ export class MRRCat {
 
       case 'mrrcat_restore':
         if (this.paywallOptions?.onRestore) {
-          this.trackPaywallEvent('restore_started', 'current');
+          this.trackPaywallEvent('restore_started', templateId);
           await this.paywallOptions.onRestore();
         }
         break;
 
       case 'mrrcat_close':
-        this.trackPaywallEvent('close', 'current');
+        this.trackPaywallEvent('close', templateId);
         this.dismissPaywall();
         break;
 
       case 'mrrcat_event':
         if (eventType && data) {
-          this.trackPaywallEvent(eventType, 'current', data.package_id);
+          this.trackPaywallEvent(eventType, templateId, data.package_id);
         }
         break;
     }
@@ -664,7 +676,7 @@ export class MRRCat {
 
   private parseSubscriberInfo(data: ApiSubscriberResponse['subscriber']): SubscriberInfo {
     const subscriptions: Record<string, Subscription> = {};
-    for (const [key, value] of Object.entries(data.subscriptions)) {
+    for (const [key, value] of Object.entries(data.subscriptions || {})) {
       subscriptions[key] = {
         platform: value.platform as Platform,
         productID: value.product_id,
@@ -679,7 +691,7 @@ export class MRRCat {
     }
 
     const entitlements: Record<string, Entitlement> = {};
-    for (const [key, value] of Object.entries(data.entitlements)) {
+    for (const [key, value] of Object.entries(data.entitlements || {})) {
       entitlements[key] = {
         isActive: value.is_active,
         productIdentifier: value.product_identifier,

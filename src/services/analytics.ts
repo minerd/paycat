@@ -19,7 +19,8 @@ import { now } from '../utils/time';
 export async function getAnalyticsOverview(
   db: D1Database,
   appId: string,
-  periodDays: number = 30
+  periodDays: number = 30,
+  excludeSandbox: boolean = false
 ): Promise<AnalyticsOverview> {
   const endDate = now();
   const startDate = endDate - periodDays * 24 * 60 * 60 * 1000;
@@ -35,14 +36,14 @@ export async function getAnalyticsOverview(
     conversions,
     refunds,
   ] = await Promise.all([
-    getActiveSubscribersCount(db, appId),
-    getActiveTrialsCount(db, appId),
-    getMRR(db, appId),
-    getRevenueByPlatform(db, appId, startDate, endDate),
-    getChurnRate(db, appId, periodDays),
-    getNewSubscribersCount(db, appId, startDate, endDate),
+    getActiveSubscribersCount(db, appId, excludeSandbox),
+    getActiveTrialsCount(db, appId, excludeSandbox),
+    getMRR(db, appId, excludeSandbox),
+    getRevenueByPlatform(db, appId, startDate, endDate, excludeSandbox),
+    getChurnRate(db, appId, periodDays, excludeSandbox),
+    getNewSubscribersCount(db, appId, startDate, endDate, excludeSandbox),
     getConversionsCount(db, appId, startDate, endDate),
-    getRefundsCount(db, appId, startDate, endDate),
+    getRefundsCount(db, appId, startDate, endDate, excludeSandbox),
   ]);
 
   return {
@@ -64,15 +65,17 @@ async function getNewSubscribersCount(
   db: D1Database,
   appId: string,
   startDate: number,
-  endDate: number
+  endDate: number,
+  excludeSandbox: boolean = false
 ): Promise<number> {
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
   const result = await db
     .prepare(
       `SELECT COUNT(DISTINCT subscriber_id) as count
        FROM subscriptions
        WHERE app_id = ?
          AND created_at >= ?
-         AND created_at <= ?`
+         AND created_at <= ?${sandboxFilter}`
     )
     .bind(appId, startDate, endDate)
     .first<{ count: number }>();
@@ -111,16 +114,20 @@ async function getRefundsCount(
   db: D1Database,
   appId: string,
   startDate: number,
-  endDate: number
+  endDate: number,
+  excludeSandbox: boolean = false
 ): Promise<number> {
+  const sandboxJoin = excludeSandbox
+    ? ' JOIN subscriptions s ON s.id = t.subscription_id AND s.is_sandbox = 0'
+    : '';
   const result = await db
     .prepare(
       `SELECT COUNT(*) as count
-       FROM transactions
-       WHERE app_id = ?
-         AND is_refunded = 1
-         AND refund_date >= ?
-         AND refund_date <= ?`
+       FROM transactions t${sandboxJoin}
+       WHERE t.app_id = ?
+         AND t.is_refunded = 1
+         AND t.refund_date >= ?
+         AND t.refund_date <= ?`
     )
     .bind(appId, startDate, endDate)
     .first<{ count: number }>();
@@ -136,21 +143,25 @@ export async function getRevenueTimeSeries(
   appId: string,
   startDate: number,
   endDate: number,
-  _granularity: 'day' | 'week' | 'month' = 'day'
+  _granularity: 'day' | 'week' | 'month' = 'day',
+  excludeSandbox: boolean = false
 ): Promise<Array<{ date: string; revenue: number; platform?: Platform; count: number }>> {
+  const sandboxJoin = excludeSandbox
+    ? ' JOIN subscriptions s ON s.id = t.subscription_id AND s.is_sandbox = 0'
+    : '';
   const result = await db
     .prepare(
       `SELECT
-         DATE(purchase_date / 1000, 'unixepoch') as date,
-         platform,
-         SUM(revenue_amount) as revenue,
+         DATE(t.purchase_date / 1000, 'unixepoch') as date,
+         t.platform,
+         SUM(t.revenue_amount) as revenue,
          COUNT(*) as count
-       FROM transactions
-       WHERE app_id = ?
-         AND purchase_date >= ?
-         AND purchase_date <= ?
-         AND is_refunded = 0
-       GROUP BY date, platform
+       FROM transactions t${sandboxJoin}
+       WHERE t.app_id = ?
+         AND t.purchase_date >= ?
+         AND t.purchase_date <= ?
+         AND t.is_refunded = 0
+       GROUP BY date, t.platform
        ORDER BY date`
     )
     .bind(appId, startDate, endDate)
@@ -245,10 +256,10 @@ async function calculateCohortRetention(
   if (totalSubscribers === 0) return [];
 
   // For each subsequent month, check how many are still active
-  for (let i = 0; i <= months; i++) {
+  for (let i = 0; i < months; i++) {
     // Calculate the month to check
     const [year, month] = cohortMonth.split('-').map(Number);
-    const checkDate = new Date(year, month - 1 + i + 1, 1); // First day of month i+1
+    const checkDate = new Date(year, month - 1 + i + 1, 1); // First day of next month after offset i
     const checkTimestamp = checkDate.getTime();
 
     const activeInMonth = await db

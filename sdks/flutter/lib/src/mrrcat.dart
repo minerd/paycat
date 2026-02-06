@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'models.dart';
 import 'exceptions.dart';
@@ -192,6 +194,26 @@ class MRRCat {
     return getSubscriberInfo(forceRefresh: true);
   }
 
+  /// Open platform's native subscription management page
+  /// iOS: Opens App Store subscription management
+  /// Android: Opens Google Play subscription management
+  Future<void> manageSubscriptions() async {
+    final Uri url;
+    if (Platform.isIOS) {
+      url = Uri.parse('https://apps.apple.com/account/subscriptions');
+    } else if (Platform.isAndroid) {
+      url = Uri.parse('https://play.google.com/store/account/subscriptions');
+    } else {
+      throw MRRCatException('unsupported_platform', 'Platform not supported');
+    }
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      throw MRRCatException('cannot_open_url', 'Cannot open subscription management URL');
+    }
+  }
+
   // Offerings
   Offerings? _cachedOfferings;
   DateTime? _offeringsCacheExpiry;
@@ -329,11 +351,11 @@ class MRRCat {
 
   static String _generateRandomString(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final random = DateTime.now().millisecondsSinceEpoch;
+    final random = Random.secure();
     return String.fromCharCodes(
       Iterable.generate(
         length,
-        (_) => chars.codeUnitAt((random + _) % chars.length),
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
       ),
     );
   }

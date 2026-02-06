@@ -25,10 +25,14 @@ export const analyticsRouter = new Hono<{
 /**
  * GET /v1/analytics/overview
  * Get analytics overview
+ * Query params:
+ *   - period: Time period (e.g., 7d, 4w, 3m)
+ *   - exclude_sandbox: If "true", exclude sandbox/test transactions
  */
 analyticsRouter.get('/overview', async (c) => {
   const app = c.get('app');
   const period = c.req.query('period') || '30d';
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
 
   // Parse period
   let periodDays = 30;
@@ -44,10 +48,11 @@ analyticsRouter.get('/overview', async (c) => {
     throw Errors.validationError('Invalid period. Use format like 7d, 4w, or 3m');
   }
 
-  const overview = await getAnalyticsOverview(c.env.DB, app.id, periodDays);
+  const overview = await getAnalyticsOverview(c.env.DB, app.id, periodDays, excludeSandbox);
 
   return c.json({
     period: `${periodDays}d`,
+    exclude_sandbox: excludeSandbox,
     ...overview,
   });
 });
@@ -55,12 +60,15 @@ analyticsRouter.get('/overview', async (c) => {
 /**
  * GET /v1/analytics/revenue
  * Get revenue time series
+ * Query params:
+ *   - exclude_sandbox: If "true", exclude sandbox/test transactions
  */
 analyticsRouter.get('/revenue', async (c) => {
   const app = c.get('app');
   const startParam = c.req.query('start');
   const endParam = c.req.query('end');
   const granularity = (c.req.query('granularity') || 'day') as 'day' | 'week' | 'month';
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
 
   // Default to last 30 days
   const endDate = endParam ? new Date(endParam).getTime() : now();
@@ -77,7 +85,8 @@ analyticsRouter.get('/revenue', async (c) => {
     app.id,
     startDate,
     endDate,
-    granularity
+    granularity,
+    excludeSandbox
   );
 
   // Aggregate by date (combine platforms)
@@ -97,6 +106,7 @@ analyticsRouter.get('/revenue', async (c) => {
     start_date: toISOString(startDate),
     end_date: toISOString(endDate),
     granularity,
+    exclude_sandbox: excludeSandbox,
     data: timeSeries,
     total: timeSeries.reduce((sum, row) => sum + row.revenue, 0),
   });
@@ -169,9 +179,13 @@ analyticsRouter.get('/funnel', async (c) => {
 /**
  * GET /v1/analytics/subscribers
  * Get subscriber counts by status
+ * Query params:
+ *   - exclude_sandbox: If "true", exclude sandbox/test subscriptions
  */
 analyticsRouter.get('/subscribers', async (c) => {
   const app = c.get('app');
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
 
   const result = await c.env.DB.prepare(
     `SELECT
@@ -179,7 +193,7 @@ analyticsRouter.get('/subscribers', async (c) => {
        platform,
        COUNT(DISTINCT subscriber_id) as count
      FROM subscriptions
-     WHERE app_id = ?
+     WHERE app_id = ?${sandboxFilter}
      GROUP BY status, platform`
   )
     .bind(app.id)
@@ -195,6 +209,7 @@ analyticsRouter.get('/subscribers', async (c) => {
   }
 
   return c.json({
+    exclude_sandbox: excludeSandbox,
     by_status: byStatus,
     by_platform: byPlatform,
     total: Object.values(byStatus).reduce((a, b) => a + b, 0),
@@ -204,9 +219,13 @@ analyticsRouter.get('/subscribers', async (c) => {
 /**
  * GET /v1/analytics/mrr
  * Get Monthly Recurring Revenue details
+ * Query params:
+ *   - exclude_sandbox: If "true", exclude sandbox/test subscriptions
  */
 analyticsRouter.get('/mrr', async (c) => {
   const app = c.get('app');
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
 
   // Get MRR by product
   const result = await c.env.DB.prepare(
@@ -218,7 +237,7 @@ analyticsRouter.get('/mrr', async (c) => {
      FROM subscriptions
      WHERE app_id = ?
        AND status = 'active'
-       AND price_amount IS NOT NULL
+       AND price_amount IS NOT NULL${sandboxFilter}
      GROUP BY product_id, platform`
   )
     .bind(app.id)
@@ -239,6 +258,7 @@ analyticsRouter.get('/mrr', async (c) => {
   const totalMRR = products.reduce((sum, p) => sum + p.mrr, 0);
 
   return c.json({
+    exclude_sandbox: excludeSandbox,
     total_mrr: totalMRR,
     currency: 'USD', // Would need to track actual currencies
     products,
@@ -294,10 +314,14 @@ analyticsRouter.get('/events', async (c) => {
 /**
  * GET /v1/analytics/churn
  * Get churn analysis
+ * Query params:
+ *   - exclude_sandbox: If "true", exclude sandbox/test subscriptions
  */
 analyticsRouter.get('/churn', async (c) => {
   const app = c.get('app');
   const period = c.req.query('period') || '30d';
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
+  const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
 
   let periodDays = 30;
   if (period.endsWith('d')) {
@@ -307,17 +331,20 @@ analyticsRouter.get('/churn', async (c) => {
   const endDate = now();
   const startDate = endDate - periodDays * 24 * 60 * 60 * 1000;
 
-  // Get churned by reason
+  // Get churned by reason (join with subscriptions for sandbox filter)
+  const sandboxJoin = excludeSandbox
+    ? ' JOIN subscriptions s ON s.subscriber_id = ae.subscriber_id AND s.is_sandbox = 0'
+    : '';
   const result = await c.env.DB.prepare(
     `SELECT
-       event_type,
+       ae.event_type,
        COUNT(*) as count
-     FROM analytics_events
-     WHERE app_id = ?
-       AND event_type IN ('cancellation', 'expiration', 'refund')
-       AND event_date >= ?
-       AND event_date <= ?
-     GROUP BY event_type`
+     FROM analytics_events ae${sandboxJoin}
+     WHERE ae.app_id = ?
+       AND ae.event_type IN ('cancellation', 'expiration', 'refund')
+       AND ae.event_date >= ?
+       AND ae.event_date <= ?
+     GROUP BY ae.event_type`
   )
     .bind(app.id, startDate, endDate)
     .all<{ event_type: string; count: number }>();
@@ -334,7 +361,7 @@ analyticsRouter.get('/churn', async (c) => {
   const activeResult = await c.env.DB.prepare(
     `SELECT COUNT(DISTINCT subscriber_id) as count
      FROM subscriptions
-     WHERE app_id = ? AND status = 'active'`
+     WHERE app_id = ? AND status = 'active'${sandboxFilter}`
   )
     .bind(app.id)
     .first<{ count: number }>();
@@ -346,6 +373,7 @@ analyticsRouter.get('/churn', async (c) => {
 
   return c.json({
     period: `${periodDays}d`,
+    exclude_sandbox: excludeSandbox,
     total_churned: totalChurned,
     churn_rate: Math.round(churnRate * 100) / 100,
     by_reason: byReason,
@@ -544,13 +572,14 @@ analyticsRouter.get('/export/revenue', async (c) => {
   const startParam = c.req.query('start');
   const endParam = c.req.query('end');
   const granularity = (c.req.query('granularity') || 'day') as 'day' | 'week' | 'month';
+  const excludeSandbox = c.req.query('exclude_sandbox') === 'true';
 
   const endDate = endParam ? new Date(endParam).getTime() : now();
   const startDate = startParam
     ? new Date(startParam).getTime()
     : endDate - 365 * 24 * 60 * 60 * 1000;
 
-  const data = await getRevenueTimeSeries(c.env.DB, app.id, startDate, endDate, granularity);
+  const data = await getRevenueTimeSeries(c.env.DB, app.id, startDate, endDate, granularity, excludeSandbox);
 
   const headers = ['date', 'platform', 'revenue', 'transactions'];
 
@@ -694,7 +723,7 @@ analyticsRouter.get('/export/mrr', async (c) => {
 
 // Helper function to escape CSV values
 function escapeCSV(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+  if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;
