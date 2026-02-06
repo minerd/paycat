@@ -106,6 +106,8 @@ class ApiClient {
       active_subscriptions: number;
       mrr: { total: number; currency: string }[];
       revenue_30d: { total: number; currency: string }[];
+      refunds_30d_count: number;
+      refunds_30d_amount: { total: number; currency: string }[];
       events_30d: { event_type: string; count: number }[];
       platform_breakdown: { platform: string; count: number }[];
     }>(`/dashboard${query}`);

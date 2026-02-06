@@ -253,6 +253,16 @@ googleNotificationsRouter.post('/', async (c) => {
       platform: 'android',
     });
 
+    // Mark purchase transactions as refunded when subscription is revoked
+    if (eventType === 'refund') {
+      await c.env.DB
+        .prepare(
+          "UPDATE transactions SET is_refunded = 1, refund_date = ? WHERE subscription_id = ? AND type != 'refund' AND is_refunded = 0"
+        )
+        .bind(notification.eventTimeMillis, subscription.id)
+        .run();
+    }
+
     // Get subscriber info for webhook
     const subscriber = await getSubscriberById(c.env.DB, subscription.subscriber_id);
 

@@ -264,15 +264,91 @@ stripeNotificationsRouter.post('/', async (c) => {
     // Handle charge refund events
     if (event.type === 'charge.refunded') {
       const charge = event.data.object as {
+        id?: string;
         customer?: string;
+        invoice?: string;
         amount_refunded?: number;
         currency?: string;
       };
 
-      console.log('Refund processed:', {
-        amount: charge.amount_refunded,
-        currency: charge.currency,
-      });
+      if (charge.invoice) {
+        try {
+          // Fetch invoice from Stripe to get the subscription ID
+          const invoiceRes = await fetch(
+            `https://api.stripe.com/v1/invoices/${charge.invoice}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${config.secretKey}`,
+              },
+            }
+          );
+          const invoice = await invoiceRes.json() as { subscription?: string };
+
+          if (invoice.subscription) {
+            const subscription = await getSubscriptionByStripeId(
+              c.env.DB,
+              matchedApp.id,
+              invoice.subscription
+            );
+
+            if (subscription) {
+              // Mark purchase transactions as refunded
+              await c.env.DB
+                .prepare(
+                  "UPDATE transactions SET is_refunded = 1, refund_date = ? WHERE subscription_id = ? AND type != 'refund' AND is_refunded = 0"
+                )
+                .bind(event.created * 1000, subscription.id)
+                .run();
+
+              // Create refund transaction
+              await createTransaction(c.env.DB, {
+                subscriptionId: subscription.id,
+                appId: matchedApp.id,
+                transactionId: `refund_${event.id}`,
+                productId: subscription.product_id,
+                platform: 'stripe',
+                type: 'refund',
+                purchaseDate: event.created * 1000,
+                revenueAmount: -(charge.amount_refunded || 0),
+                revenueCurrency: charge.currency,
+                rawData: payload,
+              });
+
+              // Log refund analytics event
+              await createAnalyticsEvent(c.env.DB, {
+                appId: matchedApp.id,
+                subscriberId: subscription.subscriber_id,
+                eventType: 'refund',
+                eventDate: event.created * 1000,
+                productId: subscription.product_id,
+                platform: 'stripe',
+                revenueAmount: -(charge.amount_refunded || 0),
+                revenueCurrency: charge.currency,
+              });
+
+              // Clear subscriber cache
+              const subscriber = await getSubscriberById(c.env.DB, subscription.subscriber_id);
+              if (subscriber) {
+                try {
+                  await c.env.CACHE.delete(
+                    `subscriber:${matchedApp.id}:${subscriber.app_user_id}`
+                  );
+                } catch (e) {
+                  console.error('Cache clear failed:', e);
+                }
+              }
+
+              console.log('Stripe refund processed:', {
+                subscriptionId: subscription.id,
+                amount: charge.amount_refunded,
+                currency: charge.currency,
+              });
+            }
+          }
+        } catch (e) {
+          console.error('Failed to process Stripe refund:', e);
+        }
+      }
     }
 
     return c.json({ received: true });

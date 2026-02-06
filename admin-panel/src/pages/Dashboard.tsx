@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, TrendingUp, Apple, Smartphone, DollarSign, FlaskConical } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Apple, Smartphone, DollarSign, FlaskConical, RotateCcw } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface DashboardData {
@@ -9,6 +9,8 @@ interface DashboardData {
   active_subscriptions: number;
   mrr?: { total: number; currency: string }[];
   revenue_30d: { total: number; currency: string }[];
+  refunds_30d_count: number;
+  refunds_30d_amount: { total: number; currency: string }[];
   events_30d: { event_type: string; count: number }[];
   platform_breakdown: { platform: string; count: number }[];
 }
@@ -60,6 +62,7 @@ export default function Dashboard() {
 
   const totalRevenue = data?.revenue_30d.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
   const totalMrr = data?.mrr?.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
+  const totalRefunds = data?.refunds_30d_amount?.reduce((sum, r) => sum + (r.total || 0), 0) || 0;
 
   const stats = [
     {
@@ -85,6 +88,12 @@ export default function Dashboard() {
       value: `$${(totalRevenue / 100).toFixed(2)}`,
       icon: TrendingUp,
       color: 'bg-orange-500',
+    },
+    {
+      name: 'Refunds (30d)',
+      value: `${data?.refunds_30d_count || 0} ($${(totalRefunds / 100).toFixed(2)})`,
+      icon: RotateCcw,
+      color: 'bg-red-500',
     },
   ];
 
@@ -135,7 +144,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {stats.map((stat) => (
           <div
             key={stat.name}

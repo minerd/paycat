@@ -19,6 +19,7 @@ import {
   getSubscriberById,
   isNotificationProcessed,
   markNotificationProcessed,
+  markTransactionRefunded,
 } from '../../db/queries';
 import { dispatchWebhook, createWebhookPayload } from '../../services/webhook-dispatcher';
 import { calculateEntitlements } from '../../services/entitlement';
@@ -180,6 +181,15 @@ appleNotificationsRouter.post('/', async (c) => {
         : notification.transaction.price,
       revenueCurrency: notification.transaction.currency,
     });
+
+    // Mark original transaction as refunded
+    if (eventType === 'refund') {
+      await markTransactionRefunded(
+        c.env.DB,
+        notification.transaction.originalTransactionId,
+        notification.signedDate
+      );
+    }
 
     // Get subscriber info for webhook
     const subscriber = await getSubscriberById(c.env.DB, subscription.subscriber_id);

@@ -487,7 +487,7 @@ adminRouter.get('/dashboard', async (c) => {
   const sandboxFilter = excludeSandbox ? ' AND is_sandbox = 0' : '';
 
   // Get counts
-  const [appsCount, subscribersCount, activeSubsCount, revenueResult, mrrResult] = await Promise.all([
+  const [appsCount, subscribersCount, activeSubsCount, revenueResult, mrrResult, refundCountResult, refundAmountResult] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) as count FROM apps').first<{ count: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as count FROM subscribers').first<{ count: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as count FROM subscriptions WHERE status = 'active'${sandboxFilter}`).first<{ count: number }>(),
@@ -517,6 +517,39 @@ adminRouter.get('/dashboard', async (c) => {
        WHERE status = 'active' AND price_amount IS NOT NULL${sandboxFilter}
        GROUP BY price_currency`
     ).all<{ total: number; currency: string }>(),
+    // Refund count (30d)
+    excludeSandbox
+      ? c.env.DB.prepare(
+          `SELECT COUNT(*) as count FROM transactions t
+           JOIN subscriptions s ON s.id = t.subscription_id AND s.is_sandbox = 0
+           WHERE t.is_refunded = 1 AND t.refund_date > ?`
+        )
+          .bind(thirtyDaysAgo)
+          .first<{ count: number }>()
+      : c.env.DB.prepare(
+          'SELECT COUNT(*) as count FROM transactions WHERE is_refunded = 1 AND refund_date > ?'
+        )
+          .bind(thirtyDaysAgo)
+          .first<{ count: number }>(),
+    // Refund amount (30d)
+    excludeSandbox
+      ? c.env.DB.prepare(
+          `SELECT SUM(t.revenue_amount) as total, t.revenue_currency as currency
+           FROM transactions t
+           JOIN subscriptions s ON s.id = t.subscription_id AND s.is_sandbox = 0
+           WHERE t.is_refunded = 1 AND t.refund_date > ?
+           GROUP BY t.revenue_currency`
+        )
+          .bind(thirtyDaysAgo)
+          .all<{ total: number; currency: string }>()
+      : c.env.DB.prepare(
+          `SELECT SUM(revenue_amount) as total, revenue_currency as currency
+           FROM transactions
+           WHERE is_refunded = 1 AND refund_date > ?
+           GROUP BY revenue_currency`
+        )
+          .bind(thirtyDaysAgo)
+          .all<{ total: number; currency: string }>(),
   ]);
 
   // Get recent events (join with subscriptions for sandbox filter)
@@ -554,6 +587,8 @@ adminRouter.get('/dashboard', async (c) => {
     active_subscriptions: activeSubsCount?.count || 0,
     mrr: mrrResult.results || [],
     revenue_30d: revenueResult.results || [],
+    refunds_30d_count: refundCountResult?.count || 0,
+    refunds_30d_amount: refundAmountResult.results || [],
     events_30d: recentEvents.results || [],
     platform_breakdown: platformBreakdown.results || [],
   });
