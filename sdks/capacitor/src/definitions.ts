@@ -64,6 +64,13 @@ export interface MRRCatPlugin {
   trackEvent(options: TrackEventOptions): Promise<void>;
 
   /**
+   * Open platform's native subscription management page
+   * iOS: Opens App Store subscription management
+   * Android: Opens Google Play subscription management
+   */
+  manageSubscriptions(): Promise<void>;
+
+  /**
    * Add listener for subscription updates
    */
   addListener(

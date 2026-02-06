@@ -2,7 +2,7 @@
  * Apple App Store Server Notifications V2 Handler
  */
 
-import { decodeAppleSignedData } from './jwt';
+import { verifyAppleSignedData, decodeAppleSignedData } from './jwt';
 import type {
   NotificationV2Payload,
   JWSTransactionDecodedPayload,
@@ -22,13 +22,54 @@ export interface ParsedNotification {
   transaction?: JWSTransactionDecodedPayload;
   renewalInfo?: JWSRenewalInfoDecodedPayload;
   status?: number;
+  verified: boolean;
 }
 
 /**
- * Parse Apple App Store Server Notification V2
+ * Parse and VERIFY Apple App Store Server Notification V2
+ * This performs cryptographic signature verification
+ */
+export async function parseAppleNotificationSecure(signedPayload: string): Promise<ParsedNotification> {
+  // Verify and decode the outer JWS with signature verification
+  const payload = await verifyAppleSignedData<NotificationV2Payload>(signedPayload);
+
+  const result: ParsedNotification = {
+    notificationType: payload.notificationType,
+    subtype: payload.subtype,
+    notificationUUID: payload.notificationUUID,
+    signedDate: payload.signedDate,
+    environment: payload.data?.environment || 'Production',
+    bundleId: payload.data?.bundleId || '',
+    appAppleId: payload.data?.appAppleId,
+    status: payload.data?.status,
+    verified: true,
+  };
+
+  // Verify and decode nested transaction info if present
+  if (payload.data?.signedTransactionInfo) {
+    result.transaction = await verifyAppleSignedData<JWSTransactionDecodedPayload>(
+      payload.data.signedTransactionInfo
+    );
+  }
+
+  // Verify and decode nested renewal info if present
+  if (payload.data?.signedRenewalInfo) {
+    result.renewalInfo = await verifyAppleSignedData<JWSRenewalInfoDecodedPayload>(
+      payload.data.signedRenewalInfo
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Parse Apple App Store Server Notification V2 (UNSAFE - no verification)
+ * @deprecated Use parseAppleNotificationSecure() instead
  */
 export function parseAppleNotification(signedPayload: string): ParsedNotification {
-  // Decode the outer JWS
+  console.warn('parseAppleNotification() is deprecated. Use parseAppleNotificationSecure() instead.');
+
+  // Decode the outer JWS (no verification)
   const payload = decodeAppleSignedData<NotificationV2Payload>(signedPayload);
 
   const result: ParsedNotification = {
@@ -40,16 +81,17 @@ export function parseAppleNotification(signedPayload: string): ParsedNotificatio
     bundleId: payload.data?.bundleId || '',
     appAppleId: payload.data?.appAppleId,
     status: payload.data?.status,
+    verified: false,
   };
 
-  // Decode nested transaction info if present
+  // Decode nested transaction info if present (no verification)
   if (payload.data?.signedTransactionInfo) {
     result.transaction = decodeAppleSignedData<JWSTransactionDecodedPayload>(
       payload.data.signedTransactionInfo
     );
   }
 
-  // Decode nested renewal info if present
+  // Decode nested renewal info if present (no verification)
   if (payload.data?.signedRenewalInfo) {
     result.renewalInfo = decodeAppleSignedData<JWSRenewalInfoDecodedPayload>(
       payload.data.signedRenewalInfo

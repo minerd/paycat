@@ -6,7 +6,7 @@
 import { Hono } from 'hono';
 import type { Env, EventType, AppleConfig } from '../../types';
 import {
-  parseAppleNotification,
+  parseAppleNotificationSecure,
   mapNotificationToEventType,
   getSubscriptionStatusFromNotification,
   shouldTriggerWebhook,
@@ -17,6 +17,8 @@ import {
   createTransaction,
   createAnalyticsEvent,
   getSubscriberById,
+  isNotificationProcessed,
+  markNotificationProcessed,
 } from '../../db/queries';
 import { dispatchWebhook, createWebhookPayload } from '../../services/webhook-dispatcher';
 import { calculateEntitlements } from '../../services/entitlement';
@@ -80,8 +82,14 @@ appleNotificationsRouter.post('/', async (c) => {
       return c.json({ error: 'signedPayload is required' }, 400);
     }
 
-    // Parse notification
-    const notification = parseAppleNotification(body.signedPayload);
+    // Parse and VERIFY notification (cryptographic signature verification)
+    const notification = await parseAppleNotificationSecure(body.signedPayload);
+
+    // Double-check verification flag
+    if (!notification.verified) {
+      console.error('Apple notification signature verification failed');
+      return c.json({ error: 'Signature verification failed' }, 401);
+    }
 
     // Skip test notifications
     if (notification.notificationType === 'TEST') {
@@ -100,6 +108,19 @@ appleNotificationsRouter.post('/', async (c) => {
     if (!app) {
       console.error('App not found for bundle ID:', notification.bundleId);
       return c.json({ received: true });
+    }
+
+    // Idempotency check - skip if already processed
+    const alreadyProcessed = await isNotificationProcessed(
+      c.env.DB,
+      app.id,
+      'ios',
+      notification.notificationUUID
+    );
+
+    if (alreadyProcessed) {
+      console.log('Apple notification already processed:', notification.notificationUUID);
+      return c.json({ received: true, duplicate: true });
     }
 
     // Find subscription
@@ -127,6 +148,7 @@ appleNotificationsRouter.post('/', async (c) => {
       expiresAt: notification.transaction.expiresDate || null,
       willRenew: notification.renewalInfo?.autoRenewStatus === 1,
       gracePeriodExpiresAt: notification.renewalInfo?.gracePeriodExpiresDate || null,
+      isSandbox: notification.environment === 'Sandbox',
     });
 
     // Log transaction
@@ -209,6 +231,15 @@ appleNotificationsRouter.post('/', async (c) => {
         }
       }
     }
+
+    // Mark notification as processed (idempotency)
+    await markNotificationProcessed(
+      c.env.DB,
+      app.id,
+      'ios',
+      notification.notificationUUID,
+      notification.notificationType
+    );
 
     console.log(
       `Processed Apple notification: ${notification.notificationType}`,

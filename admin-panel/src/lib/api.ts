@@ -97,8 +97,10 @@ class ApiClient {
   }
 
   // Dashboard
-  async getDashboard() {
+  async getDashboard(excludeSandbox: boolean = false) {
+    const query = excludeSandbox ? '?exclude_sandbox=true' : '';
     return this.request<{
+      exclude_sandbox: boolean;
       apps: number;
       total_subscribers: number;
       active_subscriptions: number;
@@ -106,7 +108,7 @@ class ApiClient {
       revenue_30d: { total: number; currency: string }[];
       events_30d: { event_type: string; count: number }[];
       platform_breakdown: { platform: string; count: number }[];
-    }>('/dashboard');
+    }>(`/dashboard${query}`);
   }
 
   // Apps

@@ -539,3 +539,18 @@ CREATE INDEX IF NOT EXISTS idx_paywall_events_timestamp ON paywall_events(app_id
 CREATE INDEX IF NOT EXISTS idx_paywall_tests_app ON paywall_tests(app_id, status);
 CREATE INDEX IF NOT EXISTS idx_paywall_test_variants_test ON paywall_test_variants(test_id);
 CREATE INDEX IF NOT EXISTS idx_paywall_test_enrollments_test ON paywall_test_enrollments(test_id);
+
+-- Processed Notifications (Idempotency)
+-- Prevents duplicate processing of the same notification
+CREATE TABLE IF NOT EXISTS processed_notifications (
+  id TEXT PRIMARY KEY,
+  app_id TEXT NOT NULL REFERENCES apps(id),
+  notification_id TEXT NOT NULL,       -- Unique ID from platform (Apple UUID, Google messageId)
+  platform TEXT NOT NULL,              -- 'ios', 'android', 'stripe', etc.
+  notification_type TEXT,              -- Type of notification
+  processed_at INTEGER NOT NULL,
+  UNIQUE(app_id, platform, notification_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_processed_notifications_lookup ON processed_notifications(app_id, platform, notification_id);
+CREATE INDEX IF NOT EXISTS idx_processed_notifications_cleanup ON processed_notifications(processed_at);

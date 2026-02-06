@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, TrendingUp, Apple, Smartphone, DollarSign } from 'lucide-react';
+import { Users, CreditCard, TrendingUp, Apple, Smartphone, DollarSign, FlaskConical } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface DashboardData {
+  exclude_sandbox?: boolean;
   apps: number;
   total_subscribers: number;
   active_subscriptions: number;
@@ -16,11 +17,15 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [excludeSandbox, setExcludeSandbox] = useState(() => {
+    return localStorage.getItem('dashboard_exclude_sandbox') === 'true';
+  });
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        const result = await api.getDashboard();
+        const result = await api.getDashboard(excludeSandbox);
         setData(result);
       } catch (err) {
         setError((err as Error).message);
@@ -29,7 +34,13 @@ export default function Dashboard() {
       }
     };
     fetchData();
-  }, []);
+  }, [excludeSandbox]);
+
+  const handleToggleSandbox = () => {
+    const newValue = !excludeSandbox;
+    setExcludeSandbox(newValue);
+    localStorage.setItem('dashboard_exclude_sandbox', String(newValue));
+  };
 
   if (loading) {
     return (
@@ -103,9 +114,24 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">Overview of your payment system</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">Overview of your payment system</p>
+        </div>
+        <button
+          onClick={handleToggleSandbox}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+            excludeSandbox
+              ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+              : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}
+        >
+          <FlaskConical className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            {excludeSandbox ? 'Sandbox Hidden' : 'Sandbox Included'}
+          </span>
+        </button>
       </div>
 
       {/* Stats Grid */}

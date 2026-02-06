@@ -321,6 +321,26 @@ public final class MRRCat: @unchecked Sendable {
         }
     }
 
+    // MARK: - Subscription Management
+
+    /// Open the App Store subscription management page
+    @available(iOS 15.0, macOS 12.0, *)
+    @MainActor
+    public func manageSubscriptions() async throws {
+        #if os(iOS)
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first else {
+            throw MRRCatError.unknown
+        }
+        try await AppStore.showManageSubscriptions(in: windowScene)
+        #elseif os(macOS)
+        if let url = URL(string: "macappstores://apps.apple.com/account/subscriptions") {
+            NSWorkspace.shared.open(url)
+        }
+        #endif
+    }
+
     // MARK: - Helpers
 
     private func generateAnonymousID() -> String {
