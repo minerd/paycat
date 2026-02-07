@@ -63,6 +63,8 @@ export default function PaywallEditor() {
           setOfferingId(pw.offering_id || '');
           setActive(pw.active);
           setIsDefault(pw.is_default);
+        } else {
+          setError('Paywall not found');
         }
         setLoading(false);
       }).catch(() => setLoading(false));

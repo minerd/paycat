@@ -16,6 +16,7 @@ export default function Analytics() {
   const [excludeSandbox, setExcludeSandbox] = useState(() => localStorage.getItem('analytics_sandbox') === 'true');
   const [subTab, setSubTab] = useState<SubTab>('overview');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Data
   const [overview, setOverview] = useState<any>(null);
@@ -41,6 +42,7 @@ export default function Analytics() {
 
   const loadData = async () => {
     if (!selectedApp) return;
+    setError('');
     try {
       const [ov, rev, sub, ch, co, lt, fn] = await Promise.all([
         api.getAnalyticsOverview(selectedApp, period, excludeSandbox),
@@ -59,7 +61,7 @@ export default function Analytics() {
       setLtv(lt);
       setFunnel(fn);
     } catch (err) {
-      console.error('Analytics load error:', err);
+      setError((err as Error).message || 'Failed to load analytics');
     } finally {
       setLoading(false);
     }
@@ -145,6 +147,8 @@ export default function Analytics() {
           </button>
         </div>
       </div>
+
+      {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>}
 
       {/* Sub-tabs */}
       <div className="border-b border-gray-200">

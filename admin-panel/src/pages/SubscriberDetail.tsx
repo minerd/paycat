@@ -144,7 +144,7 @@ export default function SubscriberDetail() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-sm font-medium text-gray-700 mb-3">Custom Attributes</h3>
               <div className="space-y-1">
-                {Object.entries(JSON.parse(subscriber.attributes)).map(([k, v]) => (
+                {Object.entries((() => { try { return JSON.parse(subscriber.attributes); } catch { return {}; } })()).map(([k, v]) => (
                   <div key={k} className="flex justify-between text-sm">
                     <span className="text-gray-500">{k}</span>
                     <span className="text-gray-900">{String(v)}</span>

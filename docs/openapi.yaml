@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
-  title: PayCat API
+  title: MRRCat API
   description: |
-    Unified Payment & Subscription Management System.
-    A RevenueCat-compatible API for managing in-app purchases across iOS, Android, and Web (Stripe).
+    Self-hosted subscription and in-app purchase management platform.
+    A RevenueCat-compatible API for managing in-app purchases across iOS, Android, Web (Stripe), Amazon, and Paddle.
   version: 1.0.0
   contact:
-    name: PayCat Support
+    name: MRRCat Support
   license:
     name: MIT
 
@@ -27,6 +27,10 @@ tags:
     description: Entitlement configuration
   - name: Offerings
     description: Remote product configuration
+  - name: Paywalls
+    description: Remote paywall template configuration
+  - name: Reports
+    description: Custom report management
   - name: Webhooks
     description: Webhook management
   - name: Integrations
@@ -623,6 +627,222 @@ paths:
             text/csv:
               schema:
                 type: string
+
+  /v1/paywalls:
+    get:
+      tags: [Paywalls]
+      summary: List paywall templates
+      description: Returns all paywall templates for the app
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Paywall templates list
+
+  /v1/paywalls/types:
+    get:
+      tags: [Paywalls]
+      summary: List paywall template types
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Available template types
+
+  /v1/paywalls/{identifier}:
+    get:
+      tags: [Paywalls]
+      summary: Get paywall template
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paywall template details
+
+  /v1/paywalls/{identifier}/render:
+    get:
+      tags: [Paywalls]
+      summary: Render paywall HTML
+      description: Returns server-rendered HTML for the paywall template
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rendered paywall HTML
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /v1/paywalls/{identifier}/events:
+    post:
+      tags: [Paywalls]
+      summary: Track paywall event
+      description: Track view, close, or CTA tap events for a paywall
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_type, app_user_id]
+              properties:
+                event_type:
+                  type: string
+                  enum: [view, close, cta_tap, purchase]
+                app_user_id:
+                  type: string
+      responses:
+        '200':
+          description: Event tracked
+
+  /v1/paywalls/{identifier}/analytics:
+    get:
+      tags: [Paywalls]
+      summary: Get paywall analytics
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paywall performance metrics
+
+  /v1/reports:
+    get:
+      tags: [Reports]
+      summary: List custom reports
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Custom reports list
+
+    post:
+      tags: [Reports]
+      summary: Create custom report
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, report_type, config]
+              properties:
+                name:
+                  type: string
+                report_type:
+                  type: string
+                  enum: [revenue, subscribers, churn, retention, custom_sql]
+                config:
+                  type: object
+      responses:
+        '201':
+          description: Report created
+
+  /v1/reports/{id}:
+    get:
+      tags: [Reports]
+      summary: Get report details
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report details
+
+    patch:
+      tags: [Reports]
+      summary: Update report
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report updated
+
+    delete:
+      tags: [Reports]
+      summary: Delete report
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report deleted
+
+  /v1/reports/{id}/execute:
+    post:
+      tags: [Reports]
+      summary: Execute a report
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report execution results
+
+  /v1/reports/{id}/executions:
+    get:
+      tags: [Reports]
+      summary: List report executions
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Execution history
 
   /v1/notifications/apple:
     post:

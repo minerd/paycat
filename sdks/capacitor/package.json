@@ -1,5 +1,5 @@
 {
-  "name": "@anthropic/mrrcat-capacitor",
+  "name": "@mrrcat/capacitor",
   "version": "1.0.0",
   "description": "MRRCat SDK for Capacitor and Cordova applications",
   "main": "dist/plugin.cjs.js",
@@ -13,14 +13,14 @@
     "ios/Plugin/",
     "MRRCatCapacitor.podspec"
   ],
-  "author": "Anthropic",
+  "author": "MRRCat",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anthropic/mrrcat-capacitor.git"
+    "url": "https://github.com/minerd/mrrcat.git"
   },
   "bugs": {
-    "url": "https://github.com/anthropic/mrrcat-capacitor/issues"
+    "url": "https://github.com/minerd/mrrcat/issues"
   },
   "keywords": [
     "capacitor",

@@ -53,7 +53,9 @@ export default function Experiments() {
       try {
         const res = await api.getExperimentResults(expId);
         setResults((prev) => ({ ...prev, [expId]: res }));
-      } catch {}
+      } catch (err) {
+        console.error('Failed to load experiment results:', err);
+      }
     }
   };
 

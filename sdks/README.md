@@ -11,6 +11,9 @@ MRRCat provides official SDKs for all major platforms to handle in-app purchases
 | Web/JavaScript | [mrrcat-web](./web) | Ready |
 | Flutter | [mrrcat_flutter](./flutter) | Ready |
 | React Native | [react-native-mrrcat](./react-native) | Ready |
+| Unity | [mrrcat-unity](./unity) | Ready |
+| Capacitor | [mrrcat-capacitor](./capacitor) | Ready |
+| Kotlin Multiplatform | [mrrcat-kmp](./kmp) | Ready |
 
 ## Quick Start
 
