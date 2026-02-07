@@ -540,6 +540,22 @@ CREATE INDEX IF NOT EXISTS idx_paywall_tests_app ON paywall_tests(app_id, status
 CREATE INDEX IF NOT EXISTS idx_paywall_test_variants_test ON paywall_test_variants(test_id);
 CREATE INDEX IF NOT EXISTS idx_paywall_test_enrollments_test ON paywall_test_enrollments(test_id);
 
+-- Subscriber Entitlements (Manual grants from admin)
+CREATE TABLE IF NOT EXISTS subscriber_entitlements (
+  id TEXT PRIMARY KEY,
+  subscriber_id TEXT NOT NULL REFERENCES subscribers(id),
+  app_id TEXT NOT NULL REFERENCES apps(id),
+  entitlement_id TEXT NOT NULL REFERENCES entitlement_definitions(id),
+  granted_by TEXT,
+  reason TEXT,
+  expires_at INTEGER,
+  revoked_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriber_entitlements_sub ON subscriber_entitlements(subscriber_id);
+CREATE INDEX IF NOT EXISTS idx_subscriber_entitlements_app ON subscriber_entitlements(app_id);
+
 -- Processed Notifications (Idempotency)
 -- Prevents duplicate processing of the same notification
 CREATE TABLE IF NOT EXISTS processed_notifications (

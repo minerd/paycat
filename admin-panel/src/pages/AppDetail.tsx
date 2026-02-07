@@ -14,8 +14,19 @@ import {
   Key,
   Webhook,
   Tag,
+  Users,
+  Link2,
+  Layout,
+  Send,
+  Eye,
+  ToggleLeft,
+  ToggleRight,
+  ChevronRight,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '../lib/api';
+import Modal from '../components/Modal';
+import Input from '../components/Input';
 
 interface AppData {
   id: string;
@@ -60,7 +71,7 @@ interface WebhookData {
   secret?: string;
 }
 
-type Tab = 'platforms' | 'entitlements' | 'webhooks';
+type Tab = 'platforms' | 'entitlements' | 'webhooks' | 'subscribers' | 'integrations' | 'paywalls';
 
 export default function AppDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +80,11 @@ export default function AppDetail() {
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookData[]>([]);
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [subscriberTotal, setSubscriberTotal] = useState(0);
+  const [subscriberOffset, setSubscriberOffset] = useState(0);
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [paywalls, setPaywalls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -82,6 +98,8 @@ export default function AppDetail() {
   const [showMappingModal, setShowMappingModal] = useState(false);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showIntegrationModal, setShowIntegrationModal] = useState(false);
+  const [showDeliveryLogModal, setShowDeliveryLogModal] = useState<string | null>(null);
 
   const fetchApp = async () => {
     if (!id) return;
@@ -106,6 +124,40 @@ export default function AppDetail() {
   useEffect(() => {
     fetchApp();
   }, [id]);
+
+  // Lazy load subscribers when tab changes
+  useEffect(() => {
+    if (activeTab === 'subscribers' && id && subscribers.length === 0) {
+      api.getSubscribers(id, 50, 0).then((res) => {
+        setSubscribers(res.subscribers);
+        setSubscriberTotal(res.total);
+      }).catch(() => {});
+    }
+    if (activeTab === 'integrations' && id && integrations.length === 0) {
+      api.getIntegrations(id).then((res) => {
+        setIntegrations(res.integrations);
+      }).catch(() => {});
+    }
+    if (activeTab === 'paywalls' && id && paywalls.length === 0) {
+      api.getPaywalls(id).then((res) => {
+        setPaywalls(res.paywalls);
+      }).catch(() => {});
+    }
+  }, [activeTab, id]);
+
+  const fetchSubscribers = async (offset: number = 0) => {
+    if (!id) return;
+    const res = await api.getSubscribers(id, 50, offset);
+    setSubscribers(res.subscribers);
+    setSubscriberTotal(res.total);
+    setSubscriberOffset(offset);
+  };
+
+  const fetchIntegrations = async () => {
+    if (!id) return;
+    const res = await api.getIntegrations(id);
+    setIntegrations(res.integrations);
+  };
 
   const copyApiKey = async () => {
     if (!app) return;
@@ -150,6 +202,9 @@ export default function AppDetail() {
     { id: 'platforms' as Tab, label: 'Platforms', icon: Key },
     { id: 'entitlements' as Tab, label: 'Entitlements', icon: Tag },
     { id: 'webhooks' as Tab, label: 'Webhooks', icon: Webhook },
+    { id: 'subscribers' as Tab, label: 'Subscribers', icon: Users },
+    { id: 'integrations' as Tab, label: 'Integrations', icon: Link2 },
+    { id: 'paywalls' as Tab, label: 'Paywalls', icon: Layout },
   ];
 
   return (
@@ -422,6 +477,192 @@ export default function AppDetail() {
         </div>
       )}
 
+      {/* Subscribers Tab */}
+      {activeTab === 'subscribers' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Subscribers ({subscriberTotal})</h3>
+          </div>
+          {subscribers.length === 0 ? (
+            <p className="text-sm text-gray-500">No subscribers yet</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="pb-2">User ID</th>
+                      <th className="pb-2">Active Subs</th>
+                      <th className="pb-2">First Seen</th>
+                      <th className="pb-2">Last Seen</th>
+                      <th className="pb-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {subscribers.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/subscribers/${sub.id}`)}>
+                        <td className="py-2"><code className="text-sm">{sub.app_user_id}</code></td>
+                        <td className="py-2">
+                          <span className={`text-sm px-2 py-0.5 rounded ${sub.active_subscriptions > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {sub.active_subscriptions}
+                          </span>
+                        </td>
+                        <td className="py-2 text-sm text-gray-500">{new Date(sub.first_seen_at).toLocaleDateString()}</td>
+                        <td className="py-2 text-sm text-gray-500">{new Date(sub.last_seen_at).toLocaleDateString()}</td>
+                        <td className="py-2 text-right"><ChevronRight className="w-4 h-4 text-gray-400" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {subscriberTotal > 50 && (
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                  <button
+                    onClick={() => fetchSubscribers(Math.max(0, subscriberOffset - 50))}
+                    disabled={subscriberOffset === 0}
+                    className="text-sm text-indigo-600 disabled:text-gray-400"
+                  >Previous</button>
+                  <span className="text-sm text-gray-500">{subscriberOffset + 1}-{Math.min(subscriberOffset + 50, subscriberTotal)} of {subscriberTotal}</span>
+                  <button
+                    onClick={() => fetchSubscribers(subscriberOffset + 50)}
+                    disabled={subscriberOffset + 50 >= subscriberTotal}
+                    className="text-sm text-indigo-600 disabled:text-gray-400"
+                  >Next</button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Integrations Tab */}
+      {activeTab === 'integrations' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Integrations</h3>
+            <button
+              onClick={() => setShowIntegrationModal(true)}
+              className="flex items-center px-3 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add Integration
+            </button>
+          </div>
+          {integrations.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+              <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">No integrations configured yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {integrations.map((integ) => (
+                <div key={integ.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <span className="text-xs font-medium uppercase bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded mr-2">{integ.type}</span>
+                      <span className="font-medium text-gray-900">{integ.name}</span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await api.updateIntegration(id!, integ.id, { enabled: !integ.enabled });
+                        fetchIntegrations();
+                      }}
+                      className={`${integ.enabled ? 'text-green-600' : 'text-gray-400'}`}
+                    >
+                      {integ.enabled ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {(integ.events || []).slice(0, 3).map((ev: string) => (
+                      <span key={ev} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{ev}</span>
+                    ))}
+                    {(integ.events || []).length > 3 && <span className="text-xs text-gray-400">+{integ.events.length - 3}</span>}
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await api.testIntegration(id!, integ.id);
+                          alert('Test event sent successfully');
+                        } catch (err) {
+                          alert('Test failed: ' + (err as Error).message);
+                        }
+                      }}
+                      className="flex-1 text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center"
+                    >
+                      <Send className="w-3 h-3 mr-1" /> Test
+                    </button>
+                    <button
+                      onClick={() => setShowDeliveryLogModal(integ.id)}
+                      className="flex-1 text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center"
+                    >
+                      <Eye className="w-3 h-3 mr-1" /> Logs
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (confirm('Delete this integration?')) {
+                          await api.deleteIntegration(id!, integ.id);
+                          fetchIntegrations();
+                        }
+                      }}
+                      className="text-xs px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Paywalls Tab */}
+      {activeTab === 'paywalls' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Paywall Templates</h3>
+            <button
+              onClick={() => navigate(`/apps/${id}/paywalls/new`)}
+              className="flex items-center px-3 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Create Paywall
+            </button>
+          </div>
+          {paywalls.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+              <Layout className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">No paywall templates yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paywalls.map((pw) => (
+                <div key={pw.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-indigo-300 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/apps/${id}/paywalls/${pw.identifier}`)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-gray-900">{pw.name}</span>
+                    <div className="flex items-center gap-2">
+                      {pw.is_default && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">Default</span>}
+                      <span className={`text-xs px-2 py-0.5 rounded ${pw.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {pw.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-500 uppercase">{pw.template_type}</span>
+                  {pw.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{pw.description}</p>}
+                  <div className="flex items-center mt-3 text-xs text-gray-400">
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {pw.identifier}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Modals */}
       {showAppleModal && (
         <AppleConfigModal
@@ -471,6 +712,20 @@ export default function AppDetail() {
           appName={app.name}
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={handleDeleteApp}
+        />
+      )}
+      {showIntegrationModal && (
+        <IntegrationModal
+          appId={id!}
+          onClose={() => setShowIntegrationModal(false)}
+          onSuccess={fetchIntegrations}
+        />
+      )}
+      {showDeliveryLogModal && (
+        <DeliveryLogModal
+          appId={id!}
+          integrationId={showDeliveryLogModal}
+          onClose={() => setShowDeliveryLogModal(null)}
         />
       )}
     </div>
@@ -1126,58 +1381,151 @@ function DeleteConfirmModal({
   );
 }
 
-// Reusable Modal Component
-function Modal({
-  title,
-  children,
+// Integration Modal
+function IntegrationModal({
+  appId,
   onClose,
+  onSuccess,
 }: {
-  title: string;
-  children: React.ReactNode;
+  appId: string;
   onClose: () => void;
+  onSuccess: () => void;
 }) {
+  const [type, setType] = useState('slack');
+  const [name, setName] = useState('');
+  const [config, setConfig] = useState<Record<string, string>>({});
+  const [events, setEvents] = useState<string[]>(['*']);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const integrationTypes: Record<string, { label: string; fields: { key: string; label: string; placeholder: string }[] }> = {
+    slack: { label: 'Slack', fields: [{ key: 'webhook_url', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/...' }, { key: 'channel', label: 'Channel', placeholder: '#revenue' }] },
+    amplitude: { label: 'Amplitude', fields: [{ key: 'api_key', label: 'API Key', placeholder: 'Your Amplitude API key' }] },
+    mixpanel: { label: 'Mixpanel', fields: [{ key: 'token', label: 'Token', placeholder: 'Your Mixpanel token' }] },
+    segment: { label: 'Segment', fields: [{ key: 'write_key', label: 'Write Key', placeholder: 'Your Segment write key' }] },
+    firebase: { label: 'Firebase', fields: [{ key: 'server_key', label: 'Server Key', placeholder: 'Server key' }, { key: 'project_id', label: 'Project ID', placeholder: 'my-project' }] },
+    braze: { label: 'Braze', fields: [{ key: 'rest_api_key', label: 'REST API Key', placeholder: 'API key' }, { key: 'instance_url', label: 'Instance URL', placeholder: 'https://rest.iad-01.braze.com' }] },
+    webhook: { label: 'Custom Webhook', fields: [{ key: 'url', label: 'URL', placeholder: 'https://api.example.com/webhook' }, { key: 'secret', label: 'Secret (optional)', placeholder: 'Signing secret' }] },
+  };
+
+  const allEvents = ['initial_purchase', 'renewal', 'cancellation', 'expiration', 'refund', 'billing_issue', 'trial_started', 'trial_converted', 'product_change'];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await api.createIntegration(appId, { type, name: name || integrationTypes[type].label, config, events });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
+    <Modal title="Add Integration" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+          <select value={type} onChange={(e) => { setType(e.target.value); setConfig({}); }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            {Object.entries(integrationTypes).map(([k, v]) => (
+              <option key={k} value={k}>{v.label}</option>
+            ))}
+          </select>
+        </div>
+        <Input label="Name (optional)" value={name} onChange={setName} placeholder={integrationTypes[type].label} />
+        {integrationTypes[type].fields.map((field) => (
+          <Input key={field.key} label={field.label} value={config[field.key] || ''} onChange={(v) => setConfig({ ...config, [field.key]: v })} placeholder={field.placeholder} required={!field.label.includes('optional')} />
+        ))}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Events</label>
+          <label className="flex items-center text-sm mb-2">
+            <input type="checkbox" checked={events.includes('*')} onChange={(e) => setEvents(e.target.checked ? ['*'] : [])} className="mr-2" /> All events
+          </label>
+          {!events.includes('*') && (
+            <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+              {allEvents.map((ev) => (
+                <label key={ev} className="flex items-center text-sm">
+                  <input type="checkbox" checked={events.includes(ev)} onChange={(e) => {
+                    if (e.target.checked) setEvents([...events, ev]);
+                    else setEvents(events.filter((x) => x !== ev));
+                  }} className="mr-2" />
+                  {ev.replace(/_/g, ' ')}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {saving ? 'Creating...' : 'Create'}
           </button>
         </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
-// Reusable Input Component
-function Input({
-  label,
-  value,
-  onChange,
-  required,
-  placeholder,
-  type = 'text',
+// Delivery Log Modal
+function DeliveryLogModal({
+  appId,
+  integrationId,
+  onClose,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  placeholder?: string;
-  type?: string;
+  appId: string;
+  integrationId: string;
+  onClose: () => void;
 }) {
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getIntegrationDeliveries(appId, integrationId).then((res) => {
+      setDeliveries(res.deliveries);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        placeholder={placeholder}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-      />
-    </div>
+    <Modal title="Delivery Log" onClose={onClose} wide>
+      {loading ? (
+        <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div></div>
+      ) : deliveries.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-8">No deliveries yet</p>
+      ) : (
+        <div className="overflow-x-auto max-h-96">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="pb-2">Time</th>
+                <th className="pb-2">Event</th>
+                <th className="pb-2">Status</th>
+                <th className="pb-2">Result</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {deliveries.map((d) => (
+                <tr key={d.id}>
+                  <td className="py-2 text-gray-500">{new Date(d.created_at).toLocaleString()}</td>
+                  <td className="py-2"><code className="text-xs">{d.event_type}</code></td>
+                  <td className="py-2">{d.response_status || '-'}</td>
+                  <td className="py-2">
+                    <span className={`text-xs px-2 py-0.5 rounded ${d.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {d.success ? 'Success' : 'Failed'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Modal>
   );
 }

@@ -1,10 +1,12 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Box, LogOut } from 'lucide-react';
+import { LayoutDashboard, Box, LogOut, BarChart3, FlaskConical } from 'lucide-react';
 import { api } from '../lib/api';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Apps', href: '/apps', icon: Box },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Experiments', href: '/experiments', icon: FlaskConical },
 ];
 
 export default function Layout() {

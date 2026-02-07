@@ -376,6 +376,8 @@ class ApiClient {
         platform: string;
         product_id: string;
         status: string;
+        is_trial: number;
+        price_amount: number | null;
         expires_at: number | null;
         created_at: number;
       }[];
@@ -385,9 +387,162 @@ class ApiClient {
         type: string;
         revenue_amount: number | null;
         revenue_currency: string | null;
+        is_refunded: number;
         created_at: number;
       }[];
     }>(`/subscribers/${id}`);
+  }
+
+  // Customer Support
+  async grantEntitlement(subscriberId: string, entitlementId: string, reason?: string, expiresAt?: number) {
+    return this.request<{ entitlement: any }>(`/subscribers/${subscriberId}/grant-entitlement`, {
+      method: 'POST',
+      body: JSON.stringify({ entitlement_id: entitlementId, reason, expires_at: expiresAt }),
+    });
+  }
+
+  async revokeEntitlement(subscriberId: string, entitlementId: string) {
+    return this.request<{ message: string }>(`/subscribers/${subscriberId}/entitlements/${entitlementId}`, { method: 'DELETE' });
+  }
+
+  async extendSubscription(subscriberId: string, subscriptionId: string, days: number) {
+    return this.request<{ message: string; new_expires_at: number }>(`/subscribers/${subscriberId}/subscriptions/${subscriptionId}/extend`, {
+      method: 'PATCH',
+      body: JSON.stringify({ days }),
+    });
+  }
+
+  async refundTransaction(subscriberId: string, transactionId: string) {
+    return this.request<{ message: string }>(`/subscribers/${subscriberId}/transactions/${transactionId}/refund`, { method: 'POST' });
+  }
+
+  async getSubscriberTimeline(subscriberId: string) {
+    return this.request<{ timeline: any[] }>(`/subscribers/${subscriberId}/timeline`);
+  }
+
+  // Analytics
+  async getAnalyticsOverview(appId: string, period = '30d', excludeSandbox = false) {
+    const qs = `?period=${period}${excludeSandbox ? '&exclude_sandbox=true' : ''}`;
+    return this.request<any>(`/apps/${appId}/analytics/overview${qs}`);
+  }
+
+  async getAnalyticsRevenue(appId: string, period = '30d', excludeSandbox = false) {
+    const qs = `?period=${period}${excludeSandbox ? '&exclude_sandbox=true' : ''}`;
+    return this.request<any>(`/apps/${appId}/analytics/revenue${qs}`);
+  }
+
+  async getAnalyticsSubscribers(appId: string, excludeSandbox = false) {
+    const qs = excludeSandbox ? '?exclude_sandbox=true' : '';
+    return this.request<any>(`/apps/${appId}/analytics/subscribers${qs}`);
+  }
+
+  async getAnalyticsMRR(appId: string, excludeSandbox = false) {
+    const qs = excludeSandbox ? '?exclude_sandbox=true' : '';
+    return this.request<any>(`/apps/${appId}/analytics/mrr${qs}`);
+  }
+
+  async getAnalyticsChurn(appId: string, period = '30d', excludeSandbox = false) {
+    const qs = `?period=${period}${excludeSandbox ? '&exclude_sandbox=true' : ''}`;
+    return this.request<any>(`/apps/${appId}/analytics/churn${qs}`);
+  }
+
+  async getAnalyticsCohort(appId: string) {
+    return this.request<any>(`/apps/${appId}/analytics/cohort`);
+  }
+
+  async getAnalyticsLTV(appId: string) {
+    return this.request<any>(`/apps/${appId}/analytics/ltv`);
+  }
+
+  async getAnalyticsFunnel(appId: string, period = '30d') {
+    return this.request<any>(`/apps/${appId}/analytics/funnel?period=${period}`);
+  }
+
+  // Experiments
+  async getExperiments(appId: string, status?: string) {
+    const qs = status ? `?status=${status}` : '';
+    return this.request<{ experiments: any[] }>(`/apps/${appId}/experiments${qs}`);
+  }
+
+  async createExperiment(appId: string, data: { name: string; description?: string; variants: { name: string; offering_id: string; weight: number }[] }) {
+    return this.request<{ experiment: any }>(`/apps/${appId}/experiments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getExperimentResults(experimentId: string) {
+    return this.request<{ variants: any[]; significance: any }>(`/experiments/${experimentId}/results`);
+  }
+
+  async updateExperiment(experimentId: string, data: { status?: string; name?: string; description?: string }) {
+    return this.request<{ message: string }>(`/experiments/${experimentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteExperiment(experimentId: string) {
+    return this.request<{ message: string }>(`/experiments/${experimentId}`, { method: 'DELETE' });
+  }
+
+  // Integrations
+  async getIntegrations(appId: string) {
+    return this.request<{ integrations: any[] }>(`/apps/${appId}/integrations`);
+  }
+
+  async createIntegration(appId: string, data: { type: string; name: string; config: Record<string, string>; events: string[] }) {
+    return this.request<{ integration: any }>(`/apps/${appId}/integrations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateIntegration(appId: string, integrationId: string, data: { name?: string; config?: Record<string, string>; events?: string[]; enabled?: boolean }) {
+    return this.request<{ message: string }>(`/apps/${appId}/integrations/${integrationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteIntegration(appId: string, integrationId: string) {
+    return this.request<{ message: string }>(`/apps/${appId}/integrations/${integrationId}`, { method: 'DELETE' });
+  }
+
+  async testIntegration(appId: string, integrationId: string) {
+    return this.request<{ message: string }>(`/apps/${appId}/integrations/${integrationId}/test`, { method: 'POST' });
+  }
+
+  async getIntegrationDeliveries(appId: string, integrationId: string) {
+    return this.request<{ deliveries: any[] }>(`/apps/${appId}/integrations/${integrationId}/deliveries`);
+  }
+
+  // Paywalls
+  async getPaywalls(appId: string) {
+    return this.request<{ paywalls: any[] }>(`/apps/${appId}/paywalls`);
+  }
+
+  async createPaywall(appId: string, data: any) {
+    return this.request<{ paywall: any }>(`/apps/${appId}/paywalls`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePaywall(appId: string, identifier: string, data: any) {
+    return this.request<{ message: string }>(`/apps/${appId}/paywalls/${identifier}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePaywall(appId: string, identifier: string) {
+    return this.request<{ message: string }>(`/apps/${appId}/paywalls/${identifier}`, { method: 'DELETE' });
+  }
+
+  // Offerings (for experiment creation)
+  async getOfferings(appId: string) {
+    return this.request<{ offerings: { id: string; identifier: string }[] }>(`/apps/${appId}/offerings`);
   }
 }
 

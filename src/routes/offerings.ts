@@ -55,6 +55,75 @@ offeringsRouter.get('/', async (c) => {
     customAttributes: parseCustomAttributes(c.req.query('attributes')),
   };
 
+  // Check for experiment enrollment if app_user_id provided
+  if (context.appUserId) {
+    const subscriber = await c.env.DB.prepare(
+      'SELECT id FROM subscribers WHERE app_id = ? AND app_user_id = ?'
+    ).bind(app.id, context.appUserId).first<{ id: string }>();
+
+    if (subscriber) {
+      // Check running experiments for this app
+      const experiment = await c.env.DB.prepare(
+        "SELECT id FROM experiments WHERE app_id = ? AND status = 'running' LIMIT 1"
+      ).bind(app.id).first<{ id: string }>();
+
+      if (experiment) {
+        // Check if already enrolled
+        let enrollment = await c.env.DB.prepare(
+          'SELECT variant_id FROM experiment_enrollments WHERE experiment_id = ? AND subscriber_id = ?'
+        ).bind(experiment.id, subscriber.id).first<{ variant_id: string }>();
+
+        if (!enrollment) {
+          // Enroll subscriber: pick variant by weight
+          const variants = await c.env.DB.prepare(
+            'SELECT id, offering_id, weight FROM experiment_variants WHERE experiment_id = ? ORDER BY weight DESC'
+          ).bind(experiment.id).all<{ id: string; offering_id: string; weight: number }>();
+
+          if (variants.results && variants.results.length > 0) {
+            const rand = Math.random() * 100;
+            let cumulative = 0;
+            let selectedVariant = variants.results[0];
+            for (const v of variants.results) {
+              cumulative += v.weight;
+              if (rand < cumulative) { selectedVariant = v; break; }
+            }
+
+            const enrollId = crypto.randomUUID();
+            await c.env.DB.prepare(
+              'INSERT OR IGNORE INTO experiment_enrollments (id, experiment_id, variant_id, subscriber_id, enrolled_at) VALUES (?, ?, ?, ?, ?)'
+            ).bind(enrollId, experiment.id, selectedVariant.id, subscriber.id, Date.now()).run();
+
+            enrollment = { variant_id: selectedVariant.id };
+          }
+        }
+
+        // If enrolled, return the variant's offering
+        if (enrollment) {
+          const variant = await c.env.DB.prepare(
+            'SELECT offering_id FROM experiment_variants WHERE id = ?'
+          ).bind(enrollment.variant_id).first<{ offering_id: string }>();
+
+          if (variant) {
+            const variantOffering = await c.env.DB.prepare(
+              'SELECT identifier FROM offerings WHERE id = ?'
+            ).bind(variant.offering_id).first<{ identifier: string }>();
+
+            if (variantOffering) {
+              const offering = await getOfferingByIdentifier(c.env.DB, app.id, variantOffering.identifier);
+              if (offering) {
+                return c.json({
+                  current_offering_id: offering.identifier,
+                  offerings: [formatOffering(offering)],
+                  experiment: { experiment_id: experiment.id, variant_id: enrollment.variant_id },
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   const offering = await getTargetedOffering(c.env.DB, app.id, context);
 
   if (!offering) {

@@ -814,6 +814,20 @@ adminRouter.delete('/product-mappings/:id', async (c) => {
   return c.json({ message: 'Mapping deleted' });
 });
 
+// ============ Offerings List ============
+
+/**
+ * GET /admin/apps/:id/offerings
+ * List offerings for an app (used by experiment creation)
+ */
+adminRouter.get('/apps/:id/offerings', async (c) => {
+  const appId = c.req.param('id');
+  const result = await c.env.DB.prepare(
+    'SELECT id, identifier, display_name, is_current FROM offerings WHERE app_id = ? ORDER BY is_current DESC, created_at DESC'
+  ).bind(appId).all();
+  return c.json({ offerings: result.results || [] });
+});
+
 // ============ Subscribers List ============
 
 /**
@@ -877,6 +891,139 @@ adminRouter.get('/subscribers/:id', async (c) => {
     subscriptions: subscriptions.results || [],
     transactions: transactions.results || [],
   });
+});
+
+// ============ Customer Support Tools ============
+
+/**
+ * POST /admin/subscribers/:id/grant-entitlement
+ * Grant a manual entitlement to subscriber
+ */
+adminRouter.post('/subscribers/:id/grant-entitlement', async (c) => {
+  const subscriberId = c.req.param('id');
+  const body = await c.req.json<{
+    entitlement_id: string;
+    reason?: string;
+    expires_at?: number;
+  }>();
+
+  if (!body.entitlement_id) throw Errors.validationError('entitlement_id is required');
+
+  const subscriber = await c.env.DB.prepare('SELECT * FROM subscribers WHERE id = ?').bind(subscriberId).first();
+  if (!subscriber) throw Errors.notFound('Subscriber');
+
+  const id = generateId();
+  const now = Date.now();
+
+  await c.env.DB.prepare(
+    `INSERT INTO subscriber_entitlements (id, subscriber_id, app_id, entitlement_id, granted_by, reason, expires_at, created_at)
+     VALUES (?, ?, ?, ?, 'admin', ?, ?, ?)`
+  ).bind(id, subscriberId, subscriber.app_id, body.entitlement_id, body.reason || null, body.expires_at || null, now).run();
+
+  return c.json({ entitlement: { id, subscriber_id: subscriberId, entitlement_id: body.entitlement_id, created_at: now } }, 201);
+});
+
+/**
+ * DELETE /admin/subscribers/:id/entitlements/:entId
+ * Revoke a manual entitlement
+ */
+adminRouter.delete('/subscribers/:id/entitlements/:entId', async (c) => {
+  const entId = c.req.param('entId');
+  await c.env.DB.prepare('UPDATE subscriber_entitlements SET revoked_at = ? WHERE id = ?').bind(Date.now(), entId).run();
+  return c.json({ message: 'Entitlement revoked' });
+});
+
+/**
+ * PATCH /admin/subscribers/:subId/subscriptions/:id/extend
+ * Extend subscription expiry
+ */
+adminRouter.patch('/subscribers/:subId/subscriptions/:id/extend', async (c) => {
+  const subscriptionId = c.req.param('id');
+  const body = await c.req.json<{ days: number }>();
+
+  if (!body.days || body.days < 1 || body.days > 365) throw Errors.validationError('days must be between 1 and 365');
+
+  const sub = await c.env.DB.prepare('SELECT * FROM subscriptions WHERE id = ?').bind(subscriptionId).first();
+  if (!sub) throw Errors.notFound('Subscription');
+
+  const currentExpiry = (sub.expires_at as number) || Date.now();
+  const newExpiry = currentExpiry + body.days * 24 * 60 * 60 * 1000;
+
+  await c.env.DB.prepare(
+    'UPDATE subscriptions SET expires_at = ?, status = ?, updated_at = ? WHERE id = ?'
+  ).bind(newExpiry, 'active', Date.now(), subscriptionId).run();
+
+  // Clear subscriber cache
+  if (sub.subscriber_id) {
+    try { await c.env.CACHE.delete(`subscriber:${sub.app_id}:${sub.subscriber_id}`); } catch {}
+  }
+
+  return c.json({ message: 'Subscription extended', new_expires_at: newExpiry });
+});
+
+/**
+ * POST /admin/subscribers/:subId/transactions/:txId/refund
+ * Mark a transaction as refunded
+ */
+adminRouter.post('/subscribers/:subId/transactions/:txId/refund', async (c) => {
+  const txId = c.req.param('txId');
+
+  const tx = await c.env.DB.prepare('SELECT * FROM transactions WHERE id = ?').bind(txId).first();
+  if (!tx) throw Errors.notFound('Transaction');
+
+  const now = Date.now();
+  await c.env.DB.prepare(
+    'UPDATE transactions SET is_refunded = 1, refund_date = ? WHERE id = ?'
+  ).bind(now, txId).run();
+
+  // Log analytics event
+  const eventId = generateId();
+  await c.env.DB.prepare(
+    `INSERT INTO analytics_events (id, app_id, subscriber_id, event_type, event_date, product_id, platform, revenue_amount, revenue_currency, created_at)
+     VALUES (?, ?, ?, 'refund', ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    eventId, tx.app_id,
+    null, // will be resolved from subscription
+    now, tx.product_id, tx.platform, tx.revenue_amount, tx.revenue_currency, now
+  ).run();
+
+  return c.json({ message: 'Transaction marked as refunded', refund_date: now });
+});
+
+/**
+ * GET /admin/subscribers/:id/timeline
+ * Get subscriber's full event timeline
+ */
+adminRouter.get('/subscribers/:id/timeline', async (c) => {
+  const subscriberId = c.req.param('id');
+
+  const [events, transactions, entitlements] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT id, event_type as type, event_date as timestamp, product_id, platform
+       FROM analytics_events WHERE subscriber_id = ? ORDER BY event_date DESC LIMIT 100`
+    ).bind(subscriberId).all(),
+    c.env.DB.prepare(
+      `SELECT t.id, t.type, t.purchase_date as timestamp, t.product_id, t.platform, t.revenue_amount, t.revenue_currency, t.is_refunded
+       FROM transactions t
+       JOIN subscriptions s ON s.id = t.subscription_id
+       WHERE s.subscriber_id = ? ORDER BY t.purchase_date DESC LIMIT 100`
+    ).bind(subscriberId).all(),
+    c.env.DB.prepare(
+      `SELECT se.id, 'entitlement_granted' as type, se.created_at as timestamp, ed.identifier as entitlement, se.reason, se.revoked_at
+       FROM subscriber_entitlements se
+       JOIN entitlement_definitions ed ON ed.id = se.entitlement_id
+       WHERE se.subscriber_id = ? ORDER BY se.created_at DESC`
+    ).bind(subscriberId).all(),
+  ]);
+
+  // Merge and sort all timeline entries
+  const timeline = [
+    ...(events.results || []).map((e: any) => ({ ...e, source: 'event' })),
+    ...(transactions.results || []).map((t: any) => ({ ...t, source: 'transaction' })),
+    ...(entitlements.results || []).map((e: any) => ({ ...e, source: 'entitlement' })),
+  ].sort((a, b) => (b.timestamp as number) - (a.timestamp as number));
+
+  return c.json({ timeline });
 });
 
 // ============ Real-time Updates (SSE) ============

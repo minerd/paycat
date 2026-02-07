@@ -7,6 +7,10 @@ import Setup from './pages/Setup';
 import Dashboard from './pages/Dashboard';
 import Apps from './pages/Apps';
 import AppDetail from './pages/AppDetail';
+import Analytics from './pages/Analytics';
+import Experiments from './pages/Experiments';
+import SubscriberDetail from './pages/SubscriberDetail';
+import PaywallEditor from './pages/PaywallEditor';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!api.isAuthenticated()) {
@@ -68,6 +72,11 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="apps" element={<Apps />} />
         <Route path="apps/:id" element={<AppDetail />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="experiments" element={<Experiments />} />
+        <Route path="subscribers/:id" element={<SubscriberDetail />} />
+        <Route path="apps/:id/paywalls/new" element={<PaywallEditor />} />
+        <Route path="apps/:id/paywalls/:identifier" element={<PaywallEditor />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

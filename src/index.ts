@@ -30,7 +30,7 @@ import { googleNotificationsRouter } from './routes/notifications/google';
 import { stripeNotificationsRouter } from './routes/notifications/stripe';
 import { amazonNotificationsRouter } from './routes/notifications/amazon';
 import { paddleNotificationsRouter } from './routes/notifications/paddle';
-import { adminRouter } from './routes/admin';
+import { adminRouter } from './routes/admin/index';
 import { handleScheduled } from './scheduled';
 
 // Create main app
